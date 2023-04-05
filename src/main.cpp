@@ -27,7 +27,7 @@ void modifyLogAlternation(std::vector<float> &vec)
 {
     for (int i = 0; i < vec.size(); i++)
     {
-        vec[i] = std::log10(vec[i] + 1);
+        vec[i] = std::log(vec[i] + 1) / std::log(100);
     }
 }
 
@@ -48,7 +48,7 @@ int main()
     audioProcessor.startProcessing();
 
     const unsigned int displayIntervalMs = 10;
-    const int maxBarLength = 20;
+    const int maxBarLength = 40;
 
     while (true)
     {

@@ -1,146 +1,163 @@
 #include "AudioCapture.h"
+#include <stdexcept>
 
-AudioCapture::AudioCapture()
+AudioCapture::AudioCapture() : pEnumerator(nullptr),
+                               pDevice(nullptr),
+                               pAudioClient(nullptr),
+                               pCaptureClient(nullptr),
+                               pwfx(nullptr),
+                               captureThreadHandle(nullptr),
+                               captureThreadId(0),
+                               isCapturing(false),
+                               bufferSize(0)
 {
-    deviceEnumerator = nullptr;
-    audioDevice = nullptr;
-    audioClient = nullptr;
-    format = nullptr;
-    captureClient = nullptr;
 }
 
 AudioCapture::~AudioCapture()
 {
-    if (captureClient)
-        captureClient->Release();
-    if (format)
-        CoTaskMemFree(format);
-    if (audioClient)
-        audioClient->Release();
-    if (audioDevice)
-        audioDevice->Release();
-    if (deviceEnumerator)
-        deviceEnumerator->Release();
-    CoUninitialize();
+    stopCapture();
+
+    if (pCaptureClient)
+        pCaptureClient->Release();
+
+    if (pAudioClient)
+        pAudioClient->Release();
+
+    if (pDevice)
+        pDevice->Release();
+
+    if (pEnumerator)
+        pEnumerator->Release();
+
+    if (pwfx)
+        CoTaskMemFree(pwfx);
 }
 
-void AudioCapture::initialize()
+bool AudioCapture::initialize()
 {
-    CoInitialize(NULL);
-
-    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void **)&deviceEnumerator);
-
+    HRESULT hr = CoInitialize(nullptr);
     if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to create device enumerator." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        return false;
 
-    hr = deviceEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &audioDevice);
+    hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void **)&pEnumerator);
     if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to get default audio device." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        return false;
 
-    hr = audioDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void **)&audioClient);
+    hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
     if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to activate audio client." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        return false;
 
-    hr = audioClient->GetMixFormat(&format);
+    hr = pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void **)&pAudioClient);
     if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to get mix format." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        return false;
 
-    hr = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, 0, 0, format, NULL);
+    hr = pAudioClient->GetMixFormat(&pwfx);
     if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to initialize audio client." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        return false;
 
-    hr = audioClient->GetService(__uuidof(IAudioCaptureClient), (void **)&captureClient);
+    hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, 0, 0, pwfx, nullptr);
     if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to get capture client service." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        return false;
 
-    hr = audioClient->GetBufferSize(&bufferFrameCount);
+    hr = pAudioClient->GetService(__uuidof(IAudioCaptureClient), (void **)&pCaptureClient);
     if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to get buffer size." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        return false;
+
+    return true;
 }
 
 void AudioCapture::startCapture()
 {
-    HRESULT hr = audioClient->Start();
-    if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to start audio client." << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    if (isCapturing)
+        return;
 
-    while (true)
+    isCapturing = true;
+    HRESULT hr = pAudioClient->Start();
+    if (FAILED(hr))
+        throw std::runtime_error("Failed to start audio client");
+
+    captureThreadHandle = CreateThread(nullptr, 0, captureThread, this, 0, &captureThreadId);
+}
+
+void AudioCapture::stopCapture()
+{
+    if (!isCapturing)
+        return;
+
+    isCapturing = false;
+    pAudioClient->Stop();
+
+    WaitForSingleObject(captureThreadHandle, INFINITE);
+    CloseHandle(captureThreadHandle);
+    captureThreadHandle = nullptr;
+    captureThreadId = 0;
+}
+
+size_t AudioCapture::getBufferSize() const
+{
+    return bufferSize;
+}
+
+float AudioCapture::getSampleRate() const
+{
+    return static_cast<float>(pwfx->nSamplesPerSec);
+}
+
+std::vector<float> AudioCapture::getOutputBuffer()
+{
+    std::unique_lock<std::mutex> lock(outputBufferMutex);
+    return outputBuffer;
+}
+
+DWORD WINAPI AudioCapture::captureThread(LPVOID lpParameter)
+{
+    AudioCapture *pThis = static_cast<AudioCapture *>(lpParameter);
+    pThis->processAudio();
+    return 0;
+}
+
+void AudioCapture::processAudio()
+{
+    while (isCapturing)
     {
         UINT32 numFramesAvailable;
         BYTE *pData;
         DWORD flags;
 
-        hr = captureClient->GetBuffer(&pData, &numFramesAvailable, &flags, NULL, NULL);
+        HRESULT hr = pCaptureClient->GetNextPacketSize(&numFramesAvailable);
         if (FAILED(hr))
-        {
-            std::cerr << "Error: Failed to get buffer." << std::endl;
             break;
-        }
 
-        if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
+        while (numFramesAvailable > 0)
         {
-            pData = NULL;
-        }
+            UINT32 numFramesToRead;
+            hr = pCaptureClient->GetBuffer(&pData, &numFramesToRead, &flags, nullptr, nullptr);
+            if (FAILED(hr))
+                break;
 
-        LONG bytesToWrite = numFramesAvailable * format->nBlockAlign;
+            if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
+            {
+                pData = nullptr;
+            }
 
-        // Call the processDataCallback function
-        if (processDataCallback)
-        {
-            processDataCallback(pData, bytesToWrite);
-        }
+            size_t bufferLength = numFramesToRead * pwfx->nBlockAlign;
+            bufferSize = bufferLength / sizeof(float);
 
-        hr = captureClient->ReleaseBuffer(numFramesAvailable);
-        if (FAILED(hr))
-        {
-            std::cerr << "Error: Failed to release buffer." << std::endl;
-            break;
+            std::vector<float> tempData(bufferSize);
+            memcpy(tempData.data(), pData, bufferLength);
+
+            {
+                std::unique_lock<std::mutex> lock(outputBufferMutex);
+                outputBuffer.swap(tempData);
+            }
+
+            hr = pCaptureClient->ReleaseBuffer(numFramesToRead);
+            if (FAILED(hr))
+                break;
+
+            hr = pCaptureClient->GetNextPacketSize(&numFramesAvailable);
+            if (FAILED(hr))
+                break;
         }
     }
-
-    stopCapture();
-}
-
-void AudioCapture::stopCapture()
-{
-    HRESULT hr = audioClient->Stop();
-    if (FAILED(hr))
-    {
-        std::cerr << "Error: Failed to stop audio client." << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-void AudioCapture::setCallback(const std::function<void(BYTE *, LONG)> &callback)
-{
-    processDataCallback = callback;
-}
-
-const WAVEFORMATEX *AudioCapture::getFormat() const
-{
-    return format;
 }

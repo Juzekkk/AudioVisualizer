@@ -9,24 +9,37 @@
 #include <Audioclient.h>
 #include <functional>
 #include <iostream>
+#include <mutex>
 
 class AudioCapture
 {
-private:
-    IMMDeviceEnumerator *deviceEnumerator;
-    IMMDevice *audioDevice;
-    IAudioClient *audioClient;
-    WAVEFORMATEX *format;
-    IAudioCaptureClient *captureClient;
-    UINT32 bufferFrameCount;
-    std::function<void(BYTE *, LONG)> processDataCallback;
-
 public:
     AudioCapture();
     ~AudioCapture();
-    void initialize();
+
+    bool initialize();
     void startCapture();
     void stopCapture();
-    void setCallback(const std::function<void(BYTE *, LONG)> &callback);
-    const WAVEFORMATEX *getFormat() const;
+    size_t getBufferSize() const;
+    float getSampleRate() const;
+    std::vector<float> getOutputBuffer();
+
+private:
+    static DWORD WINAPI captureThread(LPVOID lpParameter);
+    void processAudio();
+
+    IMMDeviceEnumerator *pEnumerator;
+    IMMDevice *pDevice;
+    IAudioClient *pAudioClient;
+    IAudioCaptureClient *pCaptureClient;
+
+    WAVEFORMATEX *pwfx;
+    HANDLE captureThreadHandle;
+    DWORD captureThreadId;
+    bool isCapturing;
+    std::vector<float> audioData;
+    std::mutex audioDataMutex;
+    size_t bufferSize;
+    std::mutex outputBufferMutex;
+    std::vector<float> outputBuffer;
 };

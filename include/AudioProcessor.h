@@ -1,27 +1,31 @@
 #pragma once
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
+#include "AudioCapture.h"
 #include <vector>
-#include <complex>
-#include <cmath>
-#include <algorithm>
-#include <Windows.h>
+#include <mutex>
+#include <windows.h>
 
 class AudioProcessor
 {
-private:
-    unsigned int numBars;
-    std::vector<double> windowFunction;
-
-    void applyWindowFunction(std::vector<std::complex<double>> &samples);
-    std::vector<double> computeFFT(const std::vector<std::complex<double>> &samples);
-    void fft(std::vector<std::complex<double>> &samples);
-    std::vector<double> groupFrequencies(const std::vector<double> &magnitudes, int sampleRate);
-
 public:
-    AudioProcessor(unsigned int numBars);
-    std::vector<double> process(BYTE *pData, LONG dataSize, const WAVEFORMATEX &format);
+    AudioProcessor(unsigned int numWindows, AudioCapture &audioCapture);
+    ~AudioProcessor();
+
+    void startProcessing();
+    void stopProcessing();
+    std::vector<float> getFrequencyWindowMagnitudes();
+
+private:
+    static DWORD WINAPI processingThread(LPVOID lpParameter);
+    void processAudio();
+    std::pair<double, double> getSection(double start, double end, int numOfParts, int sectionNumber);
+
+    AudioCapture &audioCapture;
+    unsigned int numWindows;
+    bool isProcessing;
+    HANDLE processingThreadHandle;
+    DWORD processingThreadId;
+    std::mutex frequencyWindowMagnitudesMutex;
+    std::vector<float> frequencyWindowMagnitudes;
+    size_t bufferSize;
 };

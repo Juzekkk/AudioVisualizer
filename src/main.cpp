@@ -6,6 +6,8 @@
 
 #include "AudioCapture.h"
 #include "AudioProcessor.h"
+#include "TransparentWindow.h"
+
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -31,48 +33,85 @@ void modifyLogAlternation(std::vector<float> &vec)
     }
 }
 
+#include <iostream>
+#include <GLFW/glfw3.h>
+#include "TransparentWindow.h"
+
 int main()
 {
-    AudioCapture audioCapture;
+    TransparentWindow transparentWindow;
+    transparentWindow.createWindow();
+    GLFWwindow *window = transparentWindow.getWindow();
 
-    if (!audioCapture.initialize())
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        std::cerr << "Failed to initialize AudioCapture" << std::endl;
-        return 1;
+        std::cerr << "Failed to initialize GLAD" << std::endl;
+        return -1;
     }
 
-    audioCapture.startCapture();
-
-    unsigned int numberOfWindows = 12; // Change this to the desired number of frequency windows
-    AudioProcessor audioProcessor(numberOfWindows, audioCapture);
-    audioProcessor.startProcessing();
-
-    const unsigned int displayIntervalMs = 10;
-    const int maxBarLength = 40;
-
-    while (true)
+    while (!glfwWindowShouldClose(window))
     {
-        std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
-        modifyLogAlternation(frequencyWindowMagnitudes);
-        if (!frequencyWindowMagnitudes.empty())
-        {
-            clearConsole();
-            for (float magnitude : frequencyWindowMagnitudes)
-            {
-                int barLength = static_cast<int>(std::round(magnitude * maxBarLength));
-                for (int i = 0; i < barLength; ++i)
-                {
-                    std::cout << '#';
-                }
-                std::cout << std::endl;
-            }
-        }
+        glfwPollEvents();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(displayIntervalMs));
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(0.45f, 0.55f, 0.60f, 0.7f); // Set background color with transparency
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        transparentWindow.draw();
+
+        glfwSwapBuffers(window);
     }
 
-    audioProcessor.stopProcessing();
-    audioCapture.stopCapture();
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
     return 0;
 }
+
+// int main()
+// {
+//     AudioCapture audioCapture;
+
+//     if (!audioCapture.initialize())
+//     {
+//         std::cerr << "Failed to initialize AudioCapture" << std::endl;
+//         return 1;
+//     }
+
+//     audioCapture.startCapture();
+
+//     unsigned int numberOfWindows = 12; // Change this to the desired number of frequency windows
+//     AudioProcessor audioProcessor(numberOfWindows, audioCapture);
+//     audioProcessor.startProcessing();
+
+//     const unsigned int displayIntervalMs = 10;
+//     const int maxBarLength = 40;
+
+//     while (true)
+//     {
+//         std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
+//         modifyLogAlternation(frequencyWindowMagnitudes);
+//         if (!frequencyWindowMagnitudes.empty())
+//         {
+//             clearConsole();
+//             for (float magnitude : frequencyWindowMagnitudes)
+//             {
+//                 int barLength = static_cast<int>(std::round(magnitude * maxBarLength));
+//                 for (int i = 0; i < barLength; ++i)
+//                 {
+//                     std::cout << '#';
+//                 }
+//                 std::cout << std::endl;
+//             }
+//         }
+
+//         std::this_thread::sleep_for(std::chrono::milliseconds(displayIntervalMs));
+//     }
+
+//     audioProcessor.stopProcessing();
+//     audioCapture.stopCapture();
+
+//     return 0;
+// }

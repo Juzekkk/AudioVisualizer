@@ -41,7 +41,7 @@ void TransparentWindow::createWindow()
 
 void TransparentWindow::draw()
 {
-    // Your custom OpenGL rendering code here
+    drawBars();
 }
 
 GLFWwindow *TransparentWindow::getWindow() const
@@ -79,5 +79,44 @@ void TransparentWindow::mouse_button_callback(GLFWwindow *window, int button, in
         buttonEvent = 0;
         cp_x = 0;
         cp_y = 0;
+    }
+}
+
+void TransparentWindow::setBarHeights(const std::vector<float> &heights)
+{
+    barHeights = heights;
+}
+
+void TransparentWindow::drawBars()
+{
+    if (barHeights.empty())
+    {
+        return;
+    }
+
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    float gapWidth = 4.0f; // Width of the gap between the bars
+    float barWidth = (static_cast<float>(display_w) - (barHeights.size() - 1) * gapWidth) / barHeights.size();
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, display_w, 0, display_h, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    for (size_t i = 0; i < barHeights.size(); ++i)
+    {
+        float x = i * (barWidth + gapWidth);
+        float y = 0;
+        float height = barHeights[i] * display_h;
+
+        glColor4f(0.2f, 0.6f, 0.8f, 1.0f);
+        glBegin(GL_QUADS);
+        glVertex2f(x, y);
+        glVertex2f(x + barWidth, y);
+        glVertex2f(x + barWidth, y + height);
+        glVertex2f(x, y + height);
+        glEnd();
     }
 }

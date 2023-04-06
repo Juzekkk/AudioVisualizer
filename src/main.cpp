@@ -33,12 +33,26 @@ void modifyLogAlternation(std::vector<float> &vec)
     }
 }
 
-#include <iostream>
-#include <GLFW/glfw3.h>
-#include "TransparentWindow.h"
-
 int main()
 {
+    // Initialize audio capture and processing
+    AudioCapture audioCapture;
+
+    if (!audioCapture.initialize())
+    {
+        std::cerr << "Failed to initialize AudioCapture" << std::endl;
+        return 1;
+    }
+
+    audioCapture.startCapture();
+
+    unsigned int numberOfWindows = 12; // Change this to the desired number of frequency windows
+    AudioProcessor audioProcessor(numberOfWindows, audioCapture);
+    audioProcessor.startProcessing();
+
+    const unsigned int displayIntervalMs = 10;
+
+    // Initialize the transparent window
     TransparentWindow transparentWindow;
     transparentWindow.createWindow();
     GLFWwindow *window = transparentWindow.getWindow();
@@ -51,6 +65,15 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
+
+        std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
+        modifyLogAlternation(frequencyWindowMagnitudes);
+
+        if (!frequencyWindowMagnitudes.empty())
+        {
+            transparentWindow.setBarHeights(frequencyWindowMagnitudes);
+        }
+
         glfwPollEvents();
 
         int display_w, display_h;
@@ -62,13 +85,59 @@ int main()
         transparentWindow.draw();
 
         glfwSwapBuffers(window);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(displayIntervalMs));
     }
+
+    audioProcessor.stopProcessing();
+    audioCapture.stopCapture();
 
     glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;
 }
+
+// #include <iostream>
+// #include <GLFW/glfw3.h>
+// #include "TransparentWindow.h"
+
+// int main()
+// {
+//     TransparentWindow transparentWindow;
+//     transparentWindow.createWindow();
+//     GLFWwindow *window = transparentWindow.getWindow();
+
+//     // Set the initial bar heights
+//     std::vector<float> barHeights = {0.2f, 0.5f, 0.3f, 0.7f, 0.4f, 0.6f, 0.1f};
+//     transparentWindow.setBarHeights(barHeights);
+
+//     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+//     {
+//         std::cerr << "Failed to initialize GLAD" << std::endl;
+//         return -1;
+//     }
+
+//     while (!glfwWindowShouldClose(window))
+//     {
+//         glfwPollEvents();
+
+//         int display_w, display_h;
+//         glfwGetFramebufferSize(window, &display_w, &display_h);
+//         glViewport(0, 0, display_w, display_h);
+//         glClearColor(0.45f, 0.55f, 0.60f, 0.7f); // Set background color with transparency
+//         glClear(GL_COLOR_BUFFER_BIT);
+
+//         transparentWindow.draw();
+
+//         glfwSwapBuffers(window);
+//     }
+
+//     glfwDestroyWindow(window);
+//     glfwTerminate();
+
+//     return 0;
+// }
 
 // int main()
 // {

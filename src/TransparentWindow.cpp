@@ -15,7 +15,7 @@ void TransparentWindow::createWindow()
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE); // Enable transparency
     glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);              // Remove window decorations
 
-    window = glfwCreateWindow(300, 200, "Semi-Transparent Window", nullptr, nullptr);
+    window = glfwCreateWindow(1920, 200, "Semi-Transparent Window", nullptr, nullptr);
     if (!window)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -96,7 +96,7 @@ void TransparentWindow::drawBars()
 
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
-    float gapWidth = 4.0f; // Width of the gap between the bars
+    float gapWidth = 5.0f; // Width of the gap between the bars
     float barWidth = (static_cast<float>(display_w) - (barHeights.size() - 1) * gapWidth) / barHeights.size();
 
     glMatrixMode(GL_PROJECTION);
@@ -111,7 +111,7 @@ void TransparentWindow::drawBars()
         float y = 0;
         float height = barHeights[i] * display_h;
 
-        glColor4f(0.2f, 0.6f, 0.8f, 1.0f);
+        glColor4f(0.1f, 0.5f, 0.1f, 0.2f);
         glBegin(GL_QUADS);
         glVertex2f(x, y);
         glVertex2f(x + barWidth, y);

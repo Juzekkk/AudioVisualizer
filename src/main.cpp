@@ -37,7 +37,7 @@ int main()
 
     audioCapture.startCapture();
 
-    unsigned int numberOfWindows = 12; // Change this to the desired number of frequency windows
+    unsigned int numberOfWindows = 24; // Change this to the desired number of frequency windows
     AudioProcessor audioProcessor(numberOfWindows, audioCapture);
     audioProcessor.startProcessing();
 
@@ -70,7 +70,7 @@ int main()
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        glClearColor(0.45f, 0.55f, 0.60f, 0.7f); // Set background color with transparency
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Set background color with transparency
         glClear(GL_COLOR_BUFFER_BIT);
 
         transparentWindow.draw();

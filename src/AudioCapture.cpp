@@ -144,7 +144,7 @@ void AudioCapture::processAudio()
             bufferSize = bufferLength / sizeof(float);
 
             std::vector<float> tempData(bufferSize);
-            memcpy(tempData.data(), pData, bufferLength);
+            std::copy(pData, pData + bufferLength, reinterpret_cast<BYTE*>(tempData.data()));
 
             {
                 std::unique_lock<std::mutex> lock(outputBufferMutex);

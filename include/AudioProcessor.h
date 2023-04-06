@@ -15,6 +15,7 @@ public:
     void stopProcessing();
     std::vector<float> getFrequencyWindowMagnitudes();
 
+
 private:
     static DWORD WINAPI processingThread(LPVOID lpParameter);
     void processAudio();

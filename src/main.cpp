@@ -37,7 +37,7 @@ int main()
 
     audioCapture.startCapture();
 
-    unsigned int numberOfWindows = 24; // Change this to the desired number of frequency windows
+    unsigned int numberOfWindows = 12; // Change this to the desired number of frequency windows
     AudioProcessor audioProcessor(numberOfWindows, audioCapture);
     audioProcessor.startProcessing();
 
@@ -53,6 +53,11 @@ int main()
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    int major, minor, revision;
+    glfwGetVersion(&major, &minor, &revision);
+
+    std::cout << "GLFW Version: " << major << "." << minor << "." << revision << std::endl;
 
     while (!glfwWindowShouldClose(window))
     {

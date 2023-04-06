@@ -1,6 +1,9 @@
 #pragma once
+#define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 #include <vector>
+#include <windows.h>
 
 class TransparentWindow
 {
@@ -20,6 +23,7 @@ private:
     int cp_x, cp_y;
     int offset_cpx, offset_cpy;
     int w_posx, w_posy;
+    std::vector<float> prevBarHeights;
 
     std::vector<float> barHeights;
     void drawBars();

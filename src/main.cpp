@@ -26,7 +26,6 @@ void modifyLogAlternation(std::vector<float> &vec)
 
 int main()
 {
-    // Initialize audio capture and processing
     AudioCapture audioCapture;
 
     if (!audioCapture.initialize())
@@ -37,7 +36,7 @@ int main()
 
     audioCapture.startCapture();
 
-    unsigned int numberOfWindows = 12; // Change this to the desired number of frequency windows
+    unsigned int numberOfWindows = 12;
     AudioProcessor audioProcessor(numberOfWindows, audioCapture);
     audioProcessor.startProcessing();
 
@@ -53,11 +52,6 @@ int main()
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
-
-    int major, minor, revision;
-    glfwGetVersion(&major, &minor, &revision);
-
-    std::cout << "GLFW Version: " << major << "." << minor << "." << revision << std::endl;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -75,7 +69,7 @@ int main()
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        glClearColor(0.1f, 0.1f, 0.1f, 0.1f); // Set background color with transparency
+        glClearColor(0.1f, 0.1f, 0.1f, 0.1f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         transparentWindow.draw();

@@ -2,7 +2,14 @@
 #include <iostream>
 #include <cmath>
 
-TransparentWindow::TransparentWindow() : window(nullptr), buttonEvent(0), cp_x(0), cp_y(0), offset_cpx(0), offset_cpy(0), w_posx(0), w_posy(0) {}
+TransparentWindow::TransparentWindow() : window(nullptr), buttonEvent(0), cp_x(0), cp_y(0), offset_cpx(0), offset_cpy(0), w_posx(0), w_posy(0), oldWndProc(nullptr) {}
+
+TransparentWindow::~TransparentWindow()
+{
+    unsubclassWindow();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
 
 void TransparentWindow::createWindow()
 {
@@ -68,6 +75,7 @@ void TransparentWindow::createWindow()
 
     ShowWindow(hWnd, SW_SHOW);
     Shell_NotifyIcon(NIM_ADD, &nid);
+    subclassWindow();
 }
 
 void TransparentWindow::draw()
@@ -181,4 +189,59 @@ void TransparentWindow::drawBars()
 
         prevBarHeights[i] = currentHeight;
     }
+}
+
+void TransparentWindow::showContextMenu(HWND hWnd)
+{
+    HMENU hMenu = CreatePopupMenu();
+    if (hMenu)
+    {
+        AppendMenu(hMenu, MF_STRING, 1, TEXT("Close"));
+
+        POINT pt;
+        GetCursorPos(&pt);
+        SetForegroundWindow(hWnd);
+        TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, NULL);
+        DestroyMenu(hMenu);
+    }
+}
+
+void TransparentWindow::subclassWindow()
+{
+    HWND hWnd = glfwGetWin32Window(window);
+    oldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&TransparentWindow::CustomWindowProc)));
+    SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)this);
+}
+
+void TransparentWindow::unsubclassWindow()
+{
+    HWND hWnd = glfwGetWin32Window(window);
+    SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)oldWndProc);
+}
+
+LRESULT CALLBACK TransparentWindow::CustomWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    TransparentWindow *tw = reinterpret_cast<TransparentWindow *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+    switch (uMsg)
+    {
+    case WM_APP + 1:
+        if (lParam == WM_RBUTTONDOWN || lParam == WM_CONTEXTMENU)
+        {
+            if (tw)
+            {
+                tw->showContextMenu(hWnd);
+            }
+        }
+        break;
+    case WM_COMMAND:
+        if (LOWORD(wParam) == 1) // Close menu item ID
+        {
+            glfwSetWindowShouldClose(tw->getWindow(), GLFW_TRUE);
+        }
+        break;
+    default:
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
+    return 0;
 }

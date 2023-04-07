@@ -10,6 +10,7 @@ class TransparentWindow
 {
 public:
     TransparentWindow();
+    ~TransparentWindow();
     void createWindow();
     void draw();
     GLFWwindow *getWindow() const;
@@ -17,6 +18,10 @@ public:
     void cursor_position_callback(GLFWwindow *window, double xpos, double ypos);
     void mouse_button_callback(GLFWwindow *window, int button, int action, int mods);
     void setBarHeights(const std::vector<float> &heights);
+    void showContextMenu(HWND hWnd);
+    void subclassWindow();
+    void unsubclassWindow();
+    static LRESULT CustomWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     NOTIFYICONDATA nid;
 
 private:
@@ -25,6 +30,7 @@ private:
     int cp_x, cp_y;
     int offset_cpx, offset_cpy;
     int w_posx, w_posy;
+    WNDPROC oldWndProc;
     std::vector<float> prevBarHeights;
 
     std::vector<float> barHeights;

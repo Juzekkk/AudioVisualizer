@@ -10,6 +10,8 @@
 #include <functional>
 #include <iostream>
 #include <mutex>
+#include <condition_variable>
+#include <thread>
 
 class AudioCapture
 {
@@ -23,6 +25,9 @@ public:
     size_t getBufferSize() const;
     float getSampleRate() const;
     std::vector<float> getOutputBuffer();
+    bool hasNewData() const;
+    std::condition_variable newDataAvailable;
+    bool newData;
 
 private:
     static DWORD WINAPI captureThread(LPVOID lpParameter);

@@ -4,6 +4,7 @@
 #include <vector>
 #include <mutex>
 #include <windows.h>
+#include <functional>
 
 class AudioProcessor
 {
@@ -14,7 +15,6 @@ public:
     void startProcessing();
     void stopProcessing();
     std::vector<float> getFrequencyWindowMagnitudes();
-
 
 private:
     static DWORD WINAPI processingThread(LPVOID lpParameter);
@@ -29,4 +29,5 @@ private:
     std::mutex frequencyWindowMagnitudesMutex;
     std::vector<float> frequencyWindowMagnitudes;
     size_t bufferSize;
+    std::mutex audioDataMutex;
 };

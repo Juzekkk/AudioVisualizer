@@ -103,12 +103,6 @@ float AudioCapture::getSampleRate() const
     return static_cast<float>(pwfx->nSamplesPerSec);
 }
 
-std::vector<float> AudioCapture::getOutputBuffer()
-{
-    std::unique_lock<std::mutex> lock(outputBufferMutex);
-    return outputBuffer;
-}
-
 DWORD WINAPI AudioCapture::captureThread(LPVOID lpParameter)
 {
     AudioCapture *pThis = static_cast<AudioCapture *>(lpParameter);
@@ -144,12 +138,14 @@ void AudioCapture::processAudio()
             bufferSize = bufferLength / sizeof(float);
 
             std::vector<float> tempData(bufferSize);
-            std::copy(pData, pData + bufferLength, reinterpret_cast<BYTE*>(tempData.data()));
+            std::copy(pData, pData + bufferLength, reinterpret_cast<BYTE *>(tempData.data()));
 
             {
                 std::unique_lock<std::mutex> lock(outputBufferMutex);
                 outputBuffer.swap(tempData);
+                newData = true; // Set the newData flag
             }
+            newDataAvailable.notify_one();
 
             hr = pCaptureClient->ReleaseBuffer(numFramesToRead);
             if (FAILED(hr))
@@ -159,5 +155,18 @@ void AudioCapture::processAudio()
             if (FAILED(hr))
                 break;
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+}
+
+bool AudioCapture::hasNewData() const
+{
+    return newData;
+}
+
+std::vector<float> AudioCapture::getOutputBuffer()
+{
+    std::unique_lock<std::mutex> lock(outputBufferMutex);
+    newData = false;
+    return outputBuffer;
 }

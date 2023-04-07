@@ -62,16 +62,17 @@ void AudioProcessor::processAudio()
 
     while (isProcessing)
     {
-        std::vector<float> audioData = audioCapture.getOutputBuffer();
-        size_t bufferSize = audioData.size();
-
-        if (bufferSize == 0)
+        std::vector<float> audioData(0);
+        size_t bufferSize(0);
         {
-            Sleep(10);
-            continue;
+            std::unique_lock<std::mutex> lock(audioDataMutex);
+            audioCapture.newDataAvailable.wait(lock, [&]()
+                                               { return audioCapture.hasNewData(); });
+            audioData = audioCapture.getOutputBuffer();
+            bufferSize = audioData.size();
         }
 
-        if (audioData.size() >= bufferSize)
+        if (bufferSize == 1024)
         {
             std::vector<std::complex<double>> samples(audioData.begin(), audioData.begin() + bufferSize);
 
@@ -110,8 +111,6 @@ void AudioProcessor::processAudio()
                 std::unique_lock<std::mutex> lock(frequencyWindowMagnitudesMutex);
                 frequencyWindowMagnitudes = tempFrequencyWindowMagnitudes;
             }
-
-            Sleep(10); // Sleep for 10 milliseconds to allow other threads to run
         }
     }
 }

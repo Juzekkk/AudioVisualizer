@@ -1,6 +1,3 @@
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -11,18 +8,8 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <iomanip>
 #include <vector>
 #include <cmath>
-#include <cstdlib>
-
-void modifyLogAlternation(std::vector<float> &vec)
-{
-    for (int i = 0; i < vec.size(); i++)
-    {
-        vec[i] = std::log(vec[i] + 1) / std::log(100);
-    }
-}
 
 int main()
 {
@@ -55,33 +42,32 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
-
+        // Get frequency window magnitudes
         std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
-        modifyLogAlternation(frequencyWindowMagnitudes);
 
         if (!frequencyWindowMagnitudes.empty())
         {
             transparentWindow.setBarHeights(frequencyWindowMagnitudes);
         }
 
+        // Poll events and prepare for drawing
         glfwPollEvents();
-
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // Draw the transparent window and swap buffers
         transparentWindow.draw();
-
         glfwSwapBuffers(window);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(displayIntervalMs));
     }
 
+    // Cleanup
     audioProcessor.stopProcessing();
     audioCapture.stopCapture();
-
     glfwDestroyWindow(window);
     glfwTerminate();
 

@@ -75,6 +75,7 @@ void AudioProcessor::processAudio()
         if (bufferSize == 1024)
         {
             frequencyWindowMagnitudes = calculateFrequencyWindowMagnitudes(audioData, lowerFrequency, upperFrequency);
+            modifyLogAlternation(frequencyWindowMagnitudes);
         }
     }
 }
@@ -115,4 +116,12 @@ std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std:
     }
 
     return tempFrequencyWindowMagnitudes;
+}
+
+void AudioProcessor::modifyLogAlternation(std::vector<float> &vec)
+{
+    for (int i = 0; i < vec.size(); i++)
+    {
+        vec[i] = std::log(vec[i] + 1) / std::log(100);
+    }
 }

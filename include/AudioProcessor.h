@@ -19,6 +19,7 @@ private:
     static DWORD WINAPI processingThreadEntryPoint(LPVOID lpParameter);
     void processAudio();
     std::vector<float> calculateFrequencyWindowMagnitudes(const std::vector<float> &audioData, double lowerFrequency, double upperFrequency);
+    void modifyLogAlternation(std::vector<float> &vec);
 
     AudioCapture &audioCapture;
     unsigned int numFrequencyWindows;

@@ -3,28 +3,39 @@
 #include <vector>
 #include <complex>
 #include <algorithm>
-#include <bitset>
+
+void bitReverse(std::vector<std::complex<double>> &data)
+{
+    size_t n = data.size();
+    size_t log2n = std::log2(n);
+    for (size_t i = 1, j = 0; i < n; ++i)
+    {
+        size_t bit = n >> 1;
+        for (; j & bit; bit >>= 1)
+        {
+            j ^= bit;
+        }
+        j ^= bit;
+        if (i < j)
+        {
+            std::swap(data[i], data[j]);
+        }
+    }
+}
 
 std::vector<std::complex<double>> fft(const std::vector<std::complex<double>> &samples)
 {
     size_t n = samples.size();
     size_t log2n = std::log2(n);
 
-    if (!std::bitset<32>(n).count() == 1)
-        return std::vector<std::complex<double>>(); // Check if n is a power of 2
-
-    // Rearrange the input samples using bit-reversal
-    std::vector<std::complex<double>> samplesCopy(n);
-    for (size_t i = 0; i < n; i++)
+    if (n & (n - 1)) // Check if n is a power of 2
     {
-        size_t reversed = 0;
-        for (size_t b = 0; b < log2n; b++)
-            reversed |= (i >> b & 1) << (log2n - 1 - b);
-        samplesCopy[reversed] = samples[i];
+        return std::vector<std::complex<double>>();
     }
 
-    // Apply the Cooley-Tukey algorithm iteratively
-    std::vector<std::complex<double>> result = samplesCopy;
+    std::vector<std::complex<double>> result = samples;
+    bitReverse(result);
+
     for (size_t s = 1; s <= log2n; s++)
     {
         size_t m = 1 << s;

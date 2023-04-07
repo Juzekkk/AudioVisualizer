@@ -4,13 +4,13 @@
 #include <complex>
 #include <algorithm>
 
-AudioProcessor::AudioProcessor(unsigned int numWindows, AudioCapture &audioCapture)
+AudioProcessor::AudioProcessor(unsigned int numFrequencyWindows, AudioCapture &audioCapture)
     : audioCapture(audioCapture),
-      numWindows(numWindows),
+      numFrequencyWindows(numFrequencyWindows),
       isProcessing(false),
       processingThreadHandle(nullptr),
       processingThreadId(0),
-      bufferSize(0)
+      audioDataMutex{}
 {
 }
 
@@ -27,7 +27,7 @@ void AudioProcessor::startProcessing()
     }
 
     isProcessing = true;
-    processingThreadHandle = CreateThread(NULL, 0, processingThread, this, 0, &processingThreadId);
+    processingThreadHandle = CreateThread(NULL, 0, processingThreadEntryPoint, this, 0, &processingThreadId);
 }
 
 void AudioProcessor::stopProcessing()
@@ -48,7 +48,7 @@ std::vector<float> AudioProcessor::getFrequencyWindowMagnitudes()
     return frequencyWindowMagnitudes;
 }
 
-DWORD WINAPI AudioProcessor::processingThread(LPVOID lpParameter)
+DWORD WINAPI AudioProcessor::processingThreadEntryPoint(LPVOID lpParameter)
 {
     AudioProcessor *audioProcessor = static_cast<AudioProcessor *>(lpParameter);
     audioProcessor->processAudio();
@@ -63,54 +63,56 @@ void AudioProcessor::processAudio()
     while (isProcessing)
     {
         std::vector<float> audioData(0);
-        size_t bufferSize(0);
         {
             std::unique_lock<std::mutex> lock(audioDataMutex);
             audioCapture.newDataAvailable.wait(lock, [&]()
                                                { return audioCapture.hasNewData(); });
             audioData = audioCapture.getOutputBuffer();
-            bufferSize = audioData.size();
         }
+
+        size_t bufferSize = audioData.size();
 
         if (bufferSize == 1024)
         {
-            std::vector<std::complex<double>> samples(audioData.begin(), audioData.begin() + bufferSize);
-
-            // Apply the FFT
-            std::vector<std::complex<double>> fftResult = fft(samples);
-
-            // Calculate magnitudes
-            std::vector<double> magnitudes;
-            for (const std::complex<double> &value : fftResult)
-            {
-                magnitudes.push_back(std::abs(value));
-            }
-
-            // Calculate the frequency window magnitudes
-            std::vector<float> tempFrequencyWindowMagnitudes(numWindows, 0);
-            double binWidth = audioCapture.getSampleRate() / static_cast<double>(bufferSize);
-            double windowSizeFactor = (upperFrequency - lowerFrequency) / numWindows;
-
-            for (unsigned int i = 0; i < numWindows; ++i)
-            {
-                double windowStartFrequency = lowerFrequency + i * windowSizeFactor;
-                double windowEndFrequency = windowStartFrequency + windowSizeFactor;
-
-                int binStart = static_cast<int>(std::ceil(windowStartFrequency / binWidth));
-                int binEnd = static_cast<int>(std::floor(windowEndFrequency / binWidth));
-
-                double sum = 0.0;
-                for (int bin = binStart; bin <= binEnd; ++bin)
-                {
-                    sum += magnitudes[bin];
-                }
-                tempFrequencyWindowMagnitudes[i] = static_cast<float>(sum / (binEnd - binStart + 1));
-            }
-
-            {
-                std::unique_lock<std::mutex> lock(frequencyWindowMagnitudesMutex);
-                frequencyWindowMagnitudes = tempFrequencyWindowMagnitudes;
-            }
+            frequencyWindowMagnitudes = calculateFrequencyWindowMagnitudes(audioData, lowerFrequency, upperFrequency);
         }
     }
+}
+
+std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std::vector<float> &audioData, double lowerFrequency, double upperFrequency)
+{
+    std::vector<std::complex<double>> samples(audioData.begin(), audioData.begin() + audioData.size());
+
+    // Apply the FFT
+    std::vector<std::complex<double>> fftResult = fft(samples);
+
+    // Calculate magnitudes
+    std::vector<double> magnitudes;
+    for (const std::complex<double> &value : fftResult)
+    {
+        magnitudes.push_back(std::abs(value));
+    }
+
+    // Calculate the frequency window magnitudes
+    std::vector<float> tempFrequencyWindowMagnitudes(numFrequencyWindows, 0);
+    double binWidth = audioCapture.getSampleRate() / static_cast<double>(audioData.size());
+    double windowSizeFactor = (upperFrequency - lowerFrequency) / numFrequencyWindows;
+
+    for (unsigned int i = 0; i < numFrequencyWindows; ++i)
+    {
+        double windowStartFrequency = lowerFrequency + i * windowSizeFactor;
+        double windowEndFrequency = windowStartFrequency + windowSizeFactor;
+
+        int binStart = static_cast<int>(std::ceil(windowStartFrequency / binWidth));
+        int binEnd = static_cast<int>(std::floor(windowEndFrequency / binWidth));
+
+        double sum = 0.0;
+        for (int bin = binStart; bin <= binEnd; ++bin)
+        {
+            sum += magnitudes[bin];
+        }
+        tempFrequencyWindowMagnitudes[i] = static_cast<float>(sum / (binEnd - binStart + 1));
+    }
+
+    return tempFrequencyWindowMagnitudes;
 }

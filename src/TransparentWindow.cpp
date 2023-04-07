@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cmath>
 
-TransparentWindow::TransparentWindow() : window(nullptr), buttonEvent(0), cp_x(0), cp_y(0), offset_cpx(0), offset_cpy(0), w_posx(0), w_posy(0), oldWndProc(nullptr) {}
+TransparentWindow::TransparentWindow() : window(nullptr), buttonEvent(0), cursorPosX(0), cursorPosY(0), offsetCursorPosX(0), offsetCursorPosY(0), windowPosX(0), windowPosY(0), oldWndProc(nullptr) {}
 
 TransparentWindow::~TransparentWindow()
 {
@@ -40,15 +40,8 @@ void TransparentWindow::createWindow()
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    // glfwSetCursorPosCallback(window, [](GLFWwindow *window, double xpos, double ypos)
-    //                          {
-    //     TransparentWindow* tw = static_cast<TransparentWindow*>(glfwGetWindowUserPointer(window));
-    //     tw->cursor_position_callback(window, xpos, ypos); });
-
-    // glfwSetMouseButtonCallback(window, [](GLFWwindow *window, int button, int action, int mods)
-    //                            {
-    //     TransparentWindow* tw = static_cast<TransparentWindow*>(glfwGetWindowUserPointer(window));
-    //     tw->mouse_button_callback(window, button, action, mods); });
+    // glfwSetCursorPosCallback(window, TransparentWindow::cursorPositionCallbackWrapper);
+    // glfwSetMouseButtonCallback(window, TransparentWindow::mouseButtonCallbackWrapper);
 
     glfwSetWindowUserPointer(window, this);
 
@@ -89,36 +82,36 @@ GLFWwindow *TransparentWindow::getWindow() const
     return window;
 }
 
-void TransparentWindow::cursor_position_callback(GLFWwindow *window, double xpos, double ypos)
+void TransparentWindow::cursorPositionCallback(GLFWwindow *window, double xpos, double ypos)
 {
     if (buttonEvent)
     {
-        offset_cpx = xpos - cp_x;
-        offset_cpy = ypos - cp_y;
-        glfwGetWindowPos(window, &w_posx, &w_posy);
-        glfwSetWindowPos(window, w_posx + offset_cpx, w_posy + offset_cpy);
-        offset_cpx = 0;
-        offset_cpy = 0;
-        cp_x += offset_cpx;
-        cp_y += offset_cpy;
+        offsetCursorPosX = xpos - cursorPosX;
+        offsetCursorPosY = ypos - cursorPosY;
+        glfwGetWindowPos(window, &windowPosX, &windowPosY);
+        glfwSetWindowPos(window, windowPosX + offsetCursorPosX, windowPosY + offsetCursorPosY);
+        offsetCursorPosX = 0;
+        offsetCursorPosY = 0;
+        cursorPosX += offsetCursorPosX;
+        cursorPosY += offsetCursorPosY;
     }
 }
 
-void TransparentWindow::mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
+void TransparentWindow::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         buttonEvent = 1;
         double x, y;
         glfwGetCursorPos(window, &x, &y);
-        cp_x = std::floor(x);
-        cp_y = std::floor(y);
+        cursorPosX = std::floor(x);
+        cursorPosY = std::floor(y);
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
     {
         buttonEvent = 0;
-        cp_x = 0;
-        cp_y = 0;
+        cursorPosX = 0;
+        cursorPosY = 0;
     }
 }
 
@@ -210,7 +203,7 @@ void TransparentWindow::showContextMenu(HWND hWnd)
 void TransparentWindow::subclassWindow()
 {
     HWND hWnd = glfwGetWin32Window(window);
-    oldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&TransparentWindow::CustomWindowProc)));
+    oldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&TransparentWindow::customWindowProc)));
     SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)this);
 }
 
@@ -220,7 +213,21 @@ void TransparentWindow::unsubclassWindow()
     SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)oldWndProc);
 }
 
-LRESULT CALLBACK TransparentWindow::CustomWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+void TransparentWindow::cursorPositionCallbackWrapper(GLFWwindow *window, double xpos, double ypos)
+{
+    TransparentWindow *tw = static_cast<TransparentWindow *>(glfwGetWindowUserPointer(window));
+    tw->cursorPositionCallback(window, xpos, ypos);
+}
+
+// ...
+
+void TransparentWindow::mouseButtonCallbackWrapper(GLFWwindow *window, int button, int action, int mods)
+{
+    TransparentWindow *tw = static_cast<TransparentWindow *>(glfwGetWindowUserPointer(window));
+    tw->mouseButtonCallback(window, button, action, mods);
+}
+
+LRESULT CALLBACK TransparentWindow::customWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     TransparentWindow *tw = reinterpret_cast<TransparentWindow *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 

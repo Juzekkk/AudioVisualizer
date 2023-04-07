@@ -4,12 +4,11 @@
 #include <vector>
 #include <mutex>
 #include <windows.h>
-#include <functional>
 
 class AudioProcessor
 {
 public:
-    AudioProcessor(unsigned int numWindows, AudioCapture &audioCapture);
+    AudioProcessor(unsigned int numFrequencyWindows, AudioCapture &audioCapture);
     ~AudioProcessor();
 
     void startProcessing();
@@ -17,17 +16,16 @@ public:
     std::vector<float> getFrequencyWindowMagnitudes();
 
 private:
-    static DWORD WINAPI processingThread(LPVOID lpParameter);
+    static DWORD WINAPI processingThreadEntryPoint(LPVOID lpParameter);
     void processAudio();
-    std::pair<double, double> getSection(double start, double end, int numOfParts, int sectionNumber);
+    std::vector<float> calculateFrequencyWindowMagnitudes(const std::vector<float> &audioData, double lowerFrequency, double upperFrequency);
 
     AudioCapture &audioCapture;
-    unsigned int numWindows;
+    unsigned int numFrequencyWindows;
     bool isProcessing;
     HANDLE processingThreadHandle;
     DWORD processingThreadId;
     std::mutex frequencyWindowMagnitudesMutex;
     std::vector<float> frequencyWindowMagnitudes;
-    size_t bufferSize;
     std::mutex audioDataMutex;
 };

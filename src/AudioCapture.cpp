@@ -9,61 +9,75 @@ AudioCapture::AudioCapture() : pEnumerator(nullptr),
                                captureThreadHandle(nullptr),
                                captureThreadId(0),
                                isCapturing(false),
-                               bufferSize(0)
+                               bufferSize(0),
+                               newData(false)
 {
 }
 
 AudioCapture::~AudioCapture()
 {
     stopCapture();
+    releaseResources();
+}
 
-    if (pCaptureClient)
-        pCaptureClient->Release();
+bool AudioCapture::initialize()
+{
+    if (FAILED(initializeCOM()))
+        return false;
 
-    if (pAudioClient)
-        pAudioClient->Release();
+    if (FAILED(initializeAudioCapture()))
+        return false;
 
-    if (pDevice)
-        pDevice->Release();
+    return true;
+}
 
-    if (pEnumerator)
-        pEnumerator->Release();
+HRESULT AudioCapture::initializeCOM()
+{
+    return CoInitialize(nullptr);
+}
+
+HRESULT AudioCapture::initializeAudioCapture()
+{
+    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void **)&pEnumerator);
+    if (FAILED(hr))
+        return hr;
+
+    hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
+    if (FAILED(hr))
+        return hr;
+
+    hr = pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void **)&pAudioClient);
+    if (FAILED(hr))
+        return hr;
+
+    hr = pAudioClient->GetMixFormat(&pwfx);
+    if (FAILED(hr))
+        return hr;
+
+    hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, 0, 0, pwfx, nullptr);
+    if (FAILED(hr))
+        return hr;
+
+    hr = pAudioClient->GetService(__uuidof(IAudioCaptureClient), (void **)&pCaptureClient);
+
+    return hr;
+}
+
+void AudioCapture::releaseResources()
+{
+    releaseInterface(pCaptureClient);
+    releaseInterface(pAudioClient);
+    releaseInterface(pDevice);
+    releaseInterface(pEnumerator);
 
     if (pwfx)
         CoTaskMemFree(pwfx);
 }
 
-bool AudioCapture::initialize()
+void AudioCapture::releaseInterface(IUnknown *pInterface)
 {
-    HRESULT hr = CoInitialize(nullptr);
-    if (FAILED(hr))
-        return false;
-
-    hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void **)&pEnumerator);
-    if (FAILED(hr))
-        return false;
-
-    hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
-    if (FAILED(hr))
-        return false;
-
-    hr = pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void **)&pAudioClient);
-    if (FAILED(hr))
-        return false;
-
-    hr = pAudioClient->GetMixFormat(&pwfx);
-    if (FAILED(hr))
-        return false;
-
-    hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, 0, 0, pwfx, nullptr);
-    if (FAILED(hr))
-        return false;
-
-    hr = pAudioClient->GetService(__uuidof(IAudioCaptureClient), (void **)&pCaptureClient);
-    if (FAILED(hr))
-        return false;
-
-    return true;
+    if (pInterface)
+        pInterface->Release();
 }
 
 void AudioCapture::startCapture()

@@ -1,14 +1,9 @@
 #pragma once
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include <Windows.h>
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
-#include <functional>
-#include <iostream>
+#include <vector>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -27,11 +22,16 @@ public:
     std::vector<float> getOutputBuffer();
     bool hasNewData() const;
     std::condition_variable newDataAvailable;
-    bool newData;
 
 private:
     static DWORD WINAPI captureThread(LPVOID lpParameter);
     void processAudio();
+
+    HRESULT initializeCOM();
+    HRESULT initializeAudioCapture();
+
+    void releaseResources();
+    void releaseInterface(IUnknown *pInterface);
 
     IMMDeviceEnumerator *pEnumerator;
     IMMDevice *pDevice;
@@ -47,4 +47,5 @@ private:
     size_t bufferSize;
     std::mutex outputBufferMutex;
     std::vector<float> outputBuffer;
+    bool newData;
 };

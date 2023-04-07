@@ -87,6 +87,7 @@ int main()
 
     audioProcessor.stopProcessing();
     audioCapture.stopCapture();
+    Shell_NotifyIcon(NIM_DELETE, &transparentWindow.nid);
 
     glfwDestroyWindow(window);
     glfwTerminate();

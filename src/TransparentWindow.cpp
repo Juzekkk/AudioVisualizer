@@ -24,7 +24,7 @@ void TransparentWindow::createWindow()
     }
 
     // Center the window on the screen
-    const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
     int screenCenterX = (mode->width - 400) / 2;
     int screenCenterY = (mode->height + 450) / 2;
     glfwSetWindowPos(window, screenCenterX, screenCenterY);
@@ -48,8 +48,26 @@ void TransparentWindow::createWindow()
     LONG exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
     exStyle &= ~WS_EX_LAYERED;
     exStyle |= WS_EX_TRANSPARENT;
+    exStyle &= ~WS_EX_APPWINDOW;
+    exStyle |= WS_EX_TOOLWINDOW;
     SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
 
+    NOTIFYICONDATA nid;
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hWnd; // handle to the window you created
+    nid.uID = 1;     // unique identifier for the icon
+    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+    nid.uCallbackMessage = WM_APP + 1; // message to be sent when the user clicks the icon
+    nid.hIcon = (HICON)LoadImage(NULL, TEXT("icon.ico"), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+    if (!nid.hIcon)
+    {
+        DWORD error = GetLastError();
+        std::cout << "Failed to load icon: " << error << std::endl;
+    }
+    strcpy(nid.szTip, "Audio Vizualizer");
+
+    ShowWindow(hWnd, SW_SHOW);
+    Shell_NotifyIcon(NIM_ADD, &nid);
 }
 
 void TransparentWindow::draw()
@@ -124,8 +142,8 @@ void TransparentWindow::drawBars()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    float upSpeed = 1.0f;    // Speed when the bar height goes up
-    float downSpeed = 0.3f;  // Speed when the bar height goes down
+    float upSpeed = 1.0f;   // Speed when the bar height goes up
+    float downSpeed = 0.3f; // Speed when the bar height goes down
 
     for (size_t i = 0; i < barHeights.size(); ++i)
     {

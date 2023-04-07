@@ -8,6 +8,7 @@ TransparentWindow::~TransparentWindow()
 {
     unsubclassWindow();
     glfwDestroyWindow(window);
+    Shell_NotifyIcon(NIM_DELETE, &nid);
     glfwTerminate();
 }
 

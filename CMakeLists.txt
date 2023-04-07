@@ -34,4 +34,8 @@ target_link_libraries(${PROJECT_NAME}
     glfw
     ${OPENGL_gl_LIBRARY}
 )
+if (WIN32)
+    target_link_libraries(${PROJECT_NAME} -mwindows)
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE include)

@@ -8,7 +8,7 @@ TransparentWindow::~TransparentWindow()
 {
     unsubclassWindow();
     glfwDestroyWindow(window);
-    Shell_NotifyIcon(NIM_DELETE, &nid);
+    menu.uninitialize();
     glfwTerminate();
 }
 
@@ -52,23 +52,9 @@ void TransparentWindow::createWindow()
     exStyle &= ~WS_EX_APPWINDOW;
     exStyle |= WS_EX_TOOLWINDOW;
     SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
-
-    NOTIFYICONDATA nid;
-    nid.cbSize = sizeof(NOTIFYICONDATA);
-    nid.hWnd = hWnd; // handle to the window you created
-    nid.uID = 1;     // unique identifier for the icon
-    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-    nid.uCallbackMessage = WM_APP + 1; // message to be sent when the user clicks the icon
-    nid.hIcon = (HICON)LoadImage(NULL, TEXT("icon.ico"), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
-    if (!nid.hIcon)
-    {
-        DWORD error = GetLastError();
-        std::cout << "Failed to load icon: " << error << std::endl;
-    }
-    strcpy(nid.szTip, "Audio Vizualizer");
+    menu.initialize(hWnd);
 
     ShowWindow(hWnd, SW_SHOW);
-    Shell_NotifyIcon(NIM_ADD, &nid);
     subclassWindow();
 }
 
@@ -185,21 +171,6 @@ void TransparentWindow::drawBars()
     }
 }
 
-void TransparentWindow::showContextMenu(HWND hWnd)
-{
-    HMENU hMenu = CreatePopupMenu();
-    if (hMenu)
-    {
-        AppendMenu(hMenu, MF_STRING, 1, TEXT("Close"));
-
-        POINT pt;
-        GetCursorPos(&pt);
-        SetForegroundWindow(hWnd);
-        TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hWnd, NULL);
-        DestroyMenu(hMenu);
-    }
-}
-
 void TransparentWindow::subclassWindow()
 {
     HWND hWnd = glfwGetWin32Window(window);
@@ -219,8 +190,6 @@ void TransparentWindow::cursorPositionCallbackWrapper(GLFWwindow *window, double
     tw->cursorPositionCallback(window, xpos, ypos);
 }
 
-// ...
-
 void TransparentWindow::mouseButtonCallbackWrapper(GLFWwindow *window, int button, int action, int mods)
 {
     TransparentWindow *tw = static_cast<TransparentWindow *>(glfwGetWindowUserPointer(window));
@@ -238,7 +207,7 @@ LRESULT CALLBACK TransparentWindow::customWindowProc(HWND hWnd, UINT uMsg, WPARA
         {
             if (tw)
             {
-                tw->showContextMenu(hWnd);
+                tw->menu.showContextMenu(hWnd);
             }
         }
         break;

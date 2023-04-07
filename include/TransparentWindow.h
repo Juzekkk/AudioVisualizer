@@ -6,6 +6,8 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include "SystemTrayMenu.h"
+
 class TransparentWindow
 {
 public:
@@ -14,13 +16,12 @@ public:
     void createWindow();
     void draw();
     GLFWwindow *getWindow() const;
-    void showContextMenu(HWND hWnd);
 
     void setBarHeights(const std::vector<float> &heights);
 
 private:
     GLFWwindow *window;
-    NOTIFYICONDATA nid;
+    SystemTrayMenu menu;
     int buttonEvent;
     int cursorPosX, cursorPosY;
     int offsetCursorPosX, offsetCursorPosY;

@@ -8,7 +8,8 @@ AudioVisualizer is a real-time audio frequency visualizer that captures system a
 
 - Real-time audio frequency visualization
 - Transparent window display
-- Some level of customization available through variables in the code
+- Position and size customization through system tray menu
+- Additional customization available through variables in the code
 
 ### Dependencies
 
@@ -40,6 +41,6 @@ To close the application, simply find its icon in the system tray rightclick and
 
 ### TODO
 
-- Customization through system tray menu.
+- Complex customization through system tray menu.
 - Multiplatform????
 - idk

@@ -251,6 +251,23 @@ void TransparentWindow::setBorder(bool border)
         LONG style = GetWindowLong(hWnd, GWL_STYLE);
         style |= WS_THICKFRAME;
         SetWindowLong(hWnd, GWL_STYLE, style);
+
+        // Get current window rect and adjust size and position
+        RECT rect;
+        GetWindowRect(hWnd, &rect);
+        int width = rect.right - rect.left;
+        int height = rect.bottom - rect.top;
+
+        // Account for the new border size
+        width += GetSystemMetrics(SM_CXSIZEFRAME) * 2;
+        height += GetSystemMetrics(SM_CYSIZEFRAME) * 2;
+
+        // Account for the position change
+        int left = rect.left - GetSystemMetrics(SM_CXSIZEFRAME);
+        int top = rect.top - GetSystemMetrics(SM_CYSIZEFRAME);
+
+        SetWindowPos(hWnd, nullptr, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+
         hasBorder = true;
     }
     else if (hasBorder)
@@ -258,6 +275,23 @@ void TransparentWindow::setBorder(bool border)
         LONG style = GetWindowLong(hWnd, GWL_STYLE);
         style &= ~WS_THICKFRAME;
         SetWindowLong(hWnd, GWL_STYLE, style);
+
+        // Get current window rect and adjust size and position
+        RECT rect;
+        GetWindowRect(hWnd, &rect);
+        int width = rect.right - rect.left;
+        int height = rect.bottom - rect.top;
+
+        // Account for the removed border size
+        width -= GetSystemMetrics(SM_CXSIZEFRAME) * 2;
+        height -= GetSystemMetrics(SM_CYSIZEFRAME) * 2;
+
+        // Account for the position change
+        int left = rect.left + GetSystemMetrics(SM_CXSIZEFRAME);
+        int top = rect.top + GetSystemMetrics(SM_CYSIZEFRAME);
+
+        SetWindowPos(hWnd, nullptr, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+
         hasBorder = false;
     }
 }

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cmath>
 
-TransparentWindow::TransparentWindow() : window(nullptr), buttonEvent(0), cursorPosX(0), cursorPosY(0), offsetCursorPosX(0), offsetCursorPosY(0), windowPosX(0), windowPosY(0), oldWndProc(nullptr) {}
+TransparentWindow::TransparentWindow() : window(nullptr), buttonEvent(0), cursorPosX(0), cursorPosY(0), offsetCursorPosX(0), offsetCursorPosY(0), windowPosX(0), windowPosY(0), oldWndProc(nullptr), hasBorder(false) {}
 
 TransparentWindow::~TransparentWindow()
 {
@@ -70,7 +70,7 @@ GLFWwindow *TransparentWindow::getWindow() const
 
 void TransparentWindow::cursorPositionCallback(GLFWwindow *window, double xpos, double ypos)
 {
-    if (menu.isDragEnabled())
+    if (menu.isModifyEnabled())
     {
         if (buttonEvent)
         {
@@ -88,7 +88,7 @@ void TransparentWindow::cursorPositionCallback(GLFWwindow *window, double xpos, 
 
 void TransparentWindow::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
-    if (menu.isDragEnabled())
+    if (menu.isModifyEnabled())
     {
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
         {
@@ -210,7 +210,11 @@ void TransparentWindow::handleSystemTrayMenuCommand(UINT command)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
         break;
     case 2:
-        menu.toggleDragEnabled();
+        menu.toggleModifyEnabled();
+        if (hasBorder)
+            setBorder(false);
+        else
+            setBorder(true);
         break;
     }
 }
@@ -236,4 +240,24 @@ LRESULT CALLBACK TransparentWindow::customWindowProc(HWND hWnd, UINT uMsg, WPARA
     }
 
     return CallWindowProc(pThis->oldWndProc, hWnd, uMsg, wParam, lParam);
+}
+
+void TransparentWindow::setBorder(bool border)
+{
+    HWND hWnd = glfwGetWin32Window(window);
+
+    if (border && !hasBorder)
+    {
+        LONG style = GetWindowLong(hWnd, GWL_STYLE);
+        style |= WS_THICKFRAME;
+        SetWindowLong(hWnd, GWL_STYLE, style);
+        hasBorder = true;
+    }
+    else if (hasBorder)
+    {
+        LONG style = GetWindowLong(hWnd, GWL_STYLE);
+        style &= ~WS_THICKFRAME;
+        SetWindowLong(hWnd, GWL_STYLE, style);
+        hasBorder = false;
+    }
 }

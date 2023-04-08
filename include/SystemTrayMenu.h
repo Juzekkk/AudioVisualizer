@@ -10,10 +10,10 @@ public:
     void initialize(HWND hWnd);
     void showContextMenu(HWND hWnd);
     void uninitialize();
-    bool isDragEnabled() const;
-    void toggleDragEnabled();
+    bool isModifyEnabled() const;
+    void toggleModifyEnabled();
 
 private:
     NOTIFYICONDATA nid;
-    bool dragEnabled;
+    bool modifyEnabled;
 };

@@ -1,7 +1,7 @@
 #include "SystemTrayMenu.h"
 #include <iostream>
 
-SystemTrayMenu::SystemTrayMenu() : nid{} {}
+SystemTrayMenu::SystemTrayMenu() : nid{}, dragEnabled(false) {}
 
 SystemTrayMenu::~SystemTrayMenu()
 {
@@ -31,6 +31,8 @@ void SystemTrayMenu::showContextMenu(HWND hWnd)
     HMENU hMenu = CreatePopupMenu();
     if (hMenu)
     {
+        UINT dragMenuItemFlag = dragEnabled ? MF_CHECKED : MF_UNCHECKED;
+        AppendMenu(hMenu, MF_STRING | dragMenuItemFlag, 2, TEXT("Enable Drag"));
         AppendMenu(hMenu, MF_STRING, 1, TEXT("Close"));
 
         POINT pt;
@@ -44,4 +46,14 @@ void SystemTrayMenu::showContextMenu(HWND hWnd)
 void SystemTrayMenu::uninitialize()
 {
     Shell_NotifyIcon(NIM_DELETE, &nid);
+}
+
+bool SystemTrayMenu::isDragEnabled() const
+{
+    return dragEnabled;
+}
+
+void SystemTrayMenu::toggleDragEnabled()
+{
+    dragEnabled = !dragEnabled;
 }

@@ -40,8 +40,8 @@ void TransparentWindow::createWindow()
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    // glfwSetCursorPosCallback(window, TransparentWindow::cursorPositionCallbackWrapper);
-    // glfwSetMouseButtonCallback(window, TransparentWindow::mouseButtonCallbackWrapper);
+    glfwSetCursorPosCallback(window, TransparentWindow::cursorPositionCallbackWrapper);
+    glfwSetMouseButtonCallback(window, TransparentWindow::mouseButtonCallbackWrapper);
 
     glfwSetWindowUserPointer(window, this);
 
@@ -70,34 +70,40 @@ GLFWwindow *TransparentWindow::getWindow() const
 
 void TransparentWindow::cursorPositionCallback(GLFWwindow *window, double xpos, double ypos)
 {
-    if (buttonEvent)
+    if (menu.isDragEnabled())
     {
-        offsetCursorPosX = xpos - cursorPosX;
-        offsetCursorPosY = ypos - cursorPosY;
-        glfwGetWindowPos(window, &windowPosX, &windowPosY);
-        glfwSetWindowPos(window, windowPosX + offsetCursorPosX, windowPosY + offsetCursorPosY);
-        offsetCursorPosX = 0;
-        offsetCursorPosY = 0;
-        cursorPosX += offsetCursorPosX;
-        cursorPosY += offsetCursorPosY;
+        if (buttonEvent)
+        {
+            offsetCursorPosX = xpos - cursorPosX;
+            offsetCursorPosY = ypos - cursorPosY;
+            glfwGetWindowPos(window, &windowPosX, &windowPosY);
+            glfwSetWindowPos(window, windowPosX + offsetCursorPosX, windowPosY + offsetCursorPosY);
+            offsetCursorPosX = 0;
+            offsetCursorPosY = 0;
+            cursorPosX += offsetCursorPosX;
+            cursorPosY += offsetCursorPosY;
+        }
     }
 }
 
 void TransparentWindow::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    if (menu.isDragEnabled())
     {
-        buttonEvent = 1;
-        double x, y;
-        glfwGetCursorPos(window, &x, &y);
-        cursorPosX = std::floor(x);
-        cursorPosY = std::floor(y);
-    }
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-    {
-        buttonEvent = 0;
-        cursorPosX = 0;
-        cursorPosY = 0;
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+        {
+            buttonEvent = 1;
+            double x, y;
+            glfwGetCursorPos(window, &x, &y);
+            cursorPosX = std::floor(x);
+            cursorPosY = std::floor(y);
+        }
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+        {
+            buttonEvent = 0;
+            cursorPosX = 0;
+            cursorPosY = 0;
+        }
     }
 }
 
@@ -196,29 +202,38 @@ void TransparentWindow::mouseButtonCallbackWrapper(GLFWwindow *window, int butto
     tw->mouseButtonCallback(window, button, action, mods);
 }
 
+void TransparentWindow::handleSystemTrayMenuCommand(UINT command)
+{
+    switch (command)
+    {
+    case 1:
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+        break;
+    case 2:
+        menu.toggleDragEnabled();
+        break;
+    }
+}
+
 LRESULT CALLBACK TransparentWindow::customWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    TransparentWindow *tw = reinterpret_cast<TransparentWindow *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+    TransparentWindow *pThis = reinterpret_cast<TransparentWindow *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
     switch (uMsg)
     {
     case WM_APP + 1:
         if (lParam == WM_RBUTTONDOWN || lParam == WM_CONTEXTMENU)
         {
-            if (tw)
-            {
-                tw->menu.showContextMenu(hWnd);
-            }
+            pThis->menu.showContextMenu(hWnd);
         }
         break;
     case WM_COMMAND:
-        if (LOWORD(wParam) == 1) // Close menu item ID
-        {
-            glfwSetWindowShouldClose(tw->getWindow(), GLFW_TRUE);
-        }
+        pThis->handleSystemTrayMenuCommand(LOWORD(wParam));
         break;
-    default:
-        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    case WM_DESTROY:
+        pThis->unsubclassWindow();
+        break;
     }
-    return 0;
+
+    return CallWindowProc(pThis->oldWndProc, hWnd, uMsg, wParam, lParam);
 }

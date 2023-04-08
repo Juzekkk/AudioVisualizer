@@ -18,6 +18,7 @@ public:
     GLFWwindow *getWindow() const;
 
     void setBarHeights(const std::vector<float> &heights);
+    void toggleDrag();
 
 private:
     GLFWwindow *window;
@@ -39,5 +40,6 @@ private:
 
     static void cursorPositionCallbackWrapper(GLFWwindow *window, double xpos, double ypos);
     static void mouseButtonCallbackWrapper(GLFWwindow *window, int button, int action, int mods);
+    void handleSystemTrayMenuCommand(UINT command);
     static LRESULT CALLBACK customWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };

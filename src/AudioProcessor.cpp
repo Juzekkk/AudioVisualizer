@@ -71,8 +71,8 @@ void AudioProcessor::processAudio()
         }
 
         size_t bufferSize = audioData.size();
-
-        if (bufferSize == 1024)
+        printf("%i\n", bufferSize);
+        if (bufferSize)
         {
             frequencyWindowMagnitudes = calculateFrequencyWindowMagnitudes(audioData, lowerFrequency, upperFrequency);
             modifyLogAlternation(frequencyWindowMagnitudes);
@@ -82,7 +82,14 @@ void AudioProcessor::processAudio()
 
 std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std::vector<float> &audioData, double lowerFrequency, double upperFrequency)
 {
+    size_t nextPow2 = 1;
+    while (nextPow2 < audioData.size())
+    {
+        nextPow2 <<= 1;
+    }
+
     std::vector<std::complex<double>> samples(audioData.begin(), audioData.begin() + audioData.size());
+    samples.resize(nextPow2, std::complex<double>(0.0, 0.0));
 
     // Apply the FFT
     std::vector<std::complex<double>> fftResult = fft(samples);
@@ -110,7 +117,10 @@ std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std:
         double sum = 0.0;
         for (int bin = binStart; bin <= binEnd; ++bin)
         {
-            sum += magnitudes[bin];
+            if (bin >= 0 && bin < magnitudes.size())
+            {
+                sum += magnitudes[bin];
+            }
         }
         tempFrequencyWindowMagnitudes[i] = static_cast<float>(sum / (binEnd - binStart + 1));
     }

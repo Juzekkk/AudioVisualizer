@@ -10,7 +10,8 @@ AudioProcessor::AudioProcessor(unsigned int numFrequencyWindows, AudioCapture &a
       isProcessing(false),
       processingThreadHandle(nullptr),
       processingThreadId(0),
-      audioDataMutex{}
+      audioDataMutex{},
+      packageReady(false)
 {
 }
 
@@ -45,7 +46,13 @@ void AudioProcessor::stopProcessing()
 std::vector<float> AudioProcessor::getFrequencyWindowMagnitudes()
 {
     std::unique_lock<std::mutex> lock(frequencyWindowMagnitudesMutex);
+    packageReady = false;
     return frequencyWindowMagnitudes;
+}
+
+bool AudioProcessor::isReady() const
+{
+    return packageReady;
 }
 
 DWORD WINAPI AudioProcessor::processingThreadEntryPoint(LPVOID lpParameter)
@@ -69,7 +76,6 @@ void AudioProcessor::processAudio()
                                                { return audioCapture.hasNewData(); });
             audioData = audioCapture.getOutputBuffer();
         }
-
         size_t nextPow2 = 1;
         while (nextPow2 < audioData.size())
         {
@@ -79,9 +85,12 @@ void AudioProcessor::processAudio()
         size_t bufferSize = audioData.size();
         if (nextPow2 == 1024)
         {
+            std::unique_lock<std::mutex> lock(readyMutex);
             frequencyWindowMagnitudes = calculateFrequencyWindowMagnitudes(audioData, lowerFrequency, upperFrequency);
             modifyLogAlternation(frequencyWindowMagnitudes);
+            packageReady = true;
         }
+        cv.notify_one();
     }
 }
 

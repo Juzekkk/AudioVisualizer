@@ -14,6 +14,9 @@ public:
     void startProcessing();
     void stopProcessing();
     std::vector<float> getFrequencyWindowMagnitudes();
+    bool isReady() const;
+    std::mutex readyMutex;
+    std::condition_variable cv;
 
 private:
     static DWORD WINAPI processingThreadEntryPoint(LPVOID lpParameter);
@@ -29,4 +32,5 @@ private:
     std::mutex frequencyWindowMagnitudesMutex;
     std::vector<float> frequencyWindowMagnitudes;
     std::mutex audioDataMutex;
+    bool packageReady;
 };

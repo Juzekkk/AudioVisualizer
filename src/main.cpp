@@ -34,19 +34,20 @@ int main()
     }
 
     TransparentWindow transparentWindow;
-    // SimpleWindow window(800, 600, "My OpenGL Window");
     std::unique_lock<std::mutex> lock(transparentWindow.mutex_);
     transparentWindow.cv_.wait(lock, [&transparentWindow]
                                { return transparentWindow.isRunning(); });
 
     while (transparentWindow.isRunning())
     {
+        std::unique_lock<std::mutex> lock(audioProcessor.readyMutex);
+        audioProcessor.cv.wait(lock, [&audioProcessor]
+                               { return audioProcessor.isReady(); });
         std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
         if (!frequencyWindowMagnitudes.empty())
         {
             transparentWindow.setBarHeights(frequencyWindowMagnitudes);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     transparentWindow.waitForClose();

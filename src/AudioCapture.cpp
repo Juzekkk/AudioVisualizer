@@ -160,6 +160,7 @@ void AudioCapture::processAudio()
                 newData = true; // Set the newData flag
             }
             newDataAvailable.notify_one();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             hr = pCaptureClient->ReleaseBuffer(numFramesToRead);
             if (FAILED(hr))
@@ -169,7 +170,6 @@ void AudioCapture::processAudio()
             if (FAILED(hr))
                 break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 

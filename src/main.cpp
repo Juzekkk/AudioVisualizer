@@ -27,49 +27,32 @@ int main()
     AudioProcessor audioProcessor(numberOfWindows, audioCapture);
     audioProcessor.startProcessing();
 
-    const unsigned int displayIntervalMs = 10;
-
-    // Initialize the transparent window
-    TransparentWindow transparentWindow;
-    transparentWindow.createWindow();
-    GLFWwindow *window = transparentWindow.getWindow();
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    if (!glfwInit())
     {
-        std::cerr << "Failed to initialize GLAD" << std::endl;
+        std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
 
-    while (!glfwWindowShouldClose(window))
-    {
-        // Get frequency window magnitudes
-        std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
+    TransparentWindow transparentWindow;
+    // SimpleWindow window(800, 600, "My OpenGL Window");
+    std::unique_lock<std::mutex> lock(transparentWindow.mutex_);
+    transparentWindow.cv_.wait(lock, [&transparentWindow]
+                               { return transparentWindow.isRunning(); });
 
+    while (transparentWindow.isRunning())
+    {
+        std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
         if (!frequencyWindowMagnitudes.empty())
         {
             transparentWindow.setBarHeights(frequencyWindowMagnitudes);
         }
-
-        // Poll events and prepare for drawing
-        glfwPollEvents();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Draw the transparent window and swap buffers
-        transparentWindow.draw();
-        glfwSwapBuffers(window);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(displayIntervalMs));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
-    // Cleanup
-    audioProcessor.stopProcessing();
-    audioCapture.stopCapture();
-    glfwDestroyWindow(window);
+    transparentWindow.waitForClose();
     glfwTerminate();
+
+    std::cout << "Window closed successfully. Exiting..." << std::endl;
 
     return 0;
 }

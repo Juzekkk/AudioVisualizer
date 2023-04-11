@@ -15,7 +15,7 @@ void SystemTrayMenu::initialize(HWND hWnd)
     nid.uID = 1;
     nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     nid.uCallbackMessage = WM_APP + 1;
-    nid.hIcon = (HICON)LoadImage(NULL, TEXT("icon.ico"), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+    nid.hIcon = (HICON)LoadImage(NULL, TEXT("../icon.ico"), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
     if (!nid.hIcon)
     {
         DWORD error = GetLastError();

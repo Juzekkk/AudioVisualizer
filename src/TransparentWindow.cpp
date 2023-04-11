@@ -2,26 +2,98 @@
 #include <iostream>
 #include <cmath>
 
-TransparentWindow::TransparentWindow() : window(nullptr), buttonEvent(0), cursorPosX(0), cursorPosY(0), offsetCursorPosX(0), offsetCursorPosY(0), windowPosX(0), windowPosY(0), oldWndProc(nullptr), hasBorder(false) {}
+TransparentWindow::TransparentWindow() : window(nullptr),
+                                         buttonEvent(0),
+                                         cursorPosX(0),
+                                         cursorPosY(0),
+                                         offsetCursorPosX(0),
+                                         offsetCursorPosY(0),
+                                         windowPosX(0),
+                                         windowPosY(0),
+                                         oldWndProc(nullptr),
+                                         hasBorder(false),
+                                         isRunning_(false)
+{
+    renderThread_ = std::thread(&TransparentWindow::run, this);
+}
 
 TransparentWindow::~TransparentWindow()
 {
-    unsubclassWindow();
-    glfwDestroyWindow(window);
-    menu.uninitialize();
-    glfwTerminate();
+    if (isRunning_)
+    {
+        isRunning_ = false;
+        renderThread_.join();
+        unsubclassWindow();
+        menu.uninitialize();
+    }
+    if (window)
+    {
+        glfwDestroyWindow(window);
+    }
 }
 
-void TransparentWindow::createWindow()
+void TransparentWindow::setBarHeights(const std::vector<float> &heights)
 {
-    if (!glfwInit())
+    barHeights = heights;
+    if (prevBarHeights.empty())
     {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
+        prevBarHeights = barHeights;
+    }
+}
+
+void TransparentWindow::waitForClose()
+{
+    renderThread_.join();
+}
+
+bool TransparentWindow::isRunning()
+{
+    return isRunning_.load();
+}
+
+GLFWwindow *TransparentWindow::getWindow()
+{
+    return window;
+}
+
+void TransparentWindow::run()
+{
+    if (isRunning_.exchange(true))
+    {
         return;
     }
 
+    initialize();
+
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.notify_one();
+    }
+
+    while (isRunning_.load())
+    {
+        glfwPollEvents();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        draw();
+        glfwSwapBuffers(window);
+
+        if (glfwWindowShouldClose(window))
+        {
+            isRunning_ = false;
+        }
+    }
+}
+
+void TransparentWindow::initialize()
+{
+    glfwSetErrorCallback(errorCallback);
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+    glfwWindowHint(GLFW_ALPHA_BITS, 8);
 
     window = glfwCreateWindow(400, 200, "Semi-Transparent Window", nullptr, nullptr);
     if (!window)
@@ -29,6 +101,11 @@ void TransparentWindow::createWindow()
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return;
+    }
+    glfwMakeContextCurrent(window);
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        std::cerr << "Failed to initialize GLAD" << std::endl;
     }
 
     // Center the window on the screen
@@ -61,11 +138,6 @@ void TransparentWindow::createWindow()
 void TransparentWindow::draw()
 {
     drawBars();
-}
-
-GLFWwindow *TransparentWindow::getWindow() const
-{
-    return window;
 }
 
 void TransparentWindow::cursorPositionCallback(GLFWwindow *window, double xpos, double ypos)
@@ -107,16 +179,6 @@ void TransparentWindow::mouseButtonCallback(GLFWwindow *window, int button, int 
     }
 }
 
-void TransparentWindow::setBarHeights(const std::vector<float> &heights)
-{
-    barHeights = heights;
-
-    if (prevBarHeights.empty())
-    {
-        prevBarHeights = barHeights;
-    }
-}
-
 void TransparentWindow::drawBars()
 {
     if (barHeights.empty())
@@ -136,8 +198,8 @@ void TransparentWindow::drawBars()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    float upSpeed = 1.0f;   // Speed when the bar height goes up
-    float downSpeed = 0.3f; // Speed when the bar height goes down
+    float upSpeed = 0.9f;    // Speed when the bar height goes up
+    float downSpeed = 0.15f; // Speed when the bar height goes down
 
     for (size_t i = 0; i < barHeights.size(); ++i)
     {
@@ -294,4 +356,9 @@ void TransparentWindow::setBorder(bool border)
 
         hasBorder = false;
     }
+}
+
+void TransparentWindow::errorCallback(int error, const char *description)
+{
+    std::cerr << "Error: " << description << std::endl;
 }

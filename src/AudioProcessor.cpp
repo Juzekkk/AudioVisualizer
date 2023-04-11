@@ -57,8 +57,8 @@ DWORD WINAPI AudioProcessor::processingThreadEntryPoint(LPVOID lpParameter)
 
 void AudioProcessor::processAudio()
 {
-    const double lowerFrequency = 20.0;
-    const double upperFrequency = 4000.0;
+    const double lowerFrequency = 40.0;
+    const double upperFrequency = 20000.0;
 
     while (isProcessing)
     {
@@ -70,9 +70,14 @@ void AudioProcessor::processAudio()
             audioData = audioCapture.getOutputBuffer();
         }
 
+        size_t nextPow2 = 1;
+        while (nextPow2 < audioData.size())
+        {
+            nextPow2 <<= 1;
+        }
+
         size_t bufferSize = audioData.size();
-        printf("%i\n", bufferSize);
-        if (bufferSize)
+        if (nextPow2 == 1024)
         {
             frequencyWindowMagnitudes = calculateFrequencyWindowMagnitudes(audioData, lowerFrequency, upperFrequency);
             modifyLogAlternation(frequencyWindowMagnitudes);
@@ -82,14 +87,8 @@ void AudioProcessor::processAudio()
 
 std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std::vector<float> &audioData, double lowerFrequency, double upperFrequency)
 {
-    size_t nextPow2 = 1;
-    while (nextPow2 < audioData.size())
-    {
-        nextPow2 <<= 1;
-    }
-
     std::vector<std::complex<double>> samples(audioData.begin(), audioData.begin() + audioData.size());
-    samples.resize(nextPow2, std::complex<double>(0.0, 0.0));
+    samples.resize(1024, std::complex<double>(0.0, 0.0));
 
     // Apply the FFT
     std::vector<std::complex<double>> fftResult = fft(samples);
@@ -104,12 +103,22 @@ std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std:
     // Calculate the frequency window magnitudes
     std::vector<float> tempFrequencyWindowMagnitudes(numFrequencyWindows, 0);
     double binWidth = audioCapture.getSampleRate() / static_cast<double>(audioData.size());
-    double windowSizeFactor = (upperFrequency - lowerFrequency) / numFrequencyWindows;
+
+    double logLowerFrequency = std::log10(lowerFrequency);
+    double logUpperFrequency = std::log10(upperFrequency);
+    double logRange = logUpperFrequency - logLowerFrequency;
+
+    double scalingFactor = 1.5; // Adjust this value to control the window size growth
 
     for (unsigned int i = 0; i < numFrequencyWindows; ++i)
     {
-        double windowStartFrequency = lowerFrequency + i * windowSizeFactor;
-        double windowEndFrequency = windowStartFrequency + windowSizeFactor;
+        double scaleFactor = 1.0 + (i * (scalingFactor - 1.0)) / (numFrequencyWindows - 1);
+
+        double logWindowStartFrequency = logLowerFrequency + (i * logRange) / (numFrequencyWindows * scaleFactor);
+        double logWindowEndFrequency = logLowerFrequency + ((i + 1) * logRange) / (numFrequencyWindows * scaleFactor);
+
+        double windowStartFrequency = std::pow(10, logWindowStartFrequency);
+        double windowEndFrequency = std::pow(10, logWindowEndFrequency);
 
         int binStart = static_cast<int>(std::ceil(windowStartFrequency / binWidth));
         int binEnd = static_cast<int>(std::floor(windowEndFrequency / binWidth));
@@ -132,6 +141,6 @@ void AudioProcessor::modifyLogAlternation(std::vector<float> &vec)
 {
     for (int i = 0; i < vec.size(); i++)
     {
-        vec[i] = std::log(vec[i] + 1) / std::log(100);
+        vec[i] = std::log(vec[i] + 1) / 8;
     }
 }

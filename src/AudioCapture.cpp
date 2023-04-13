@@ -150,17 +150,19 @@ void AudioCapture::processAudio()
 
             size_t bufferLength = numFramesToRead * pwfx->nBlockAlign;
             bufferSize = bufferLength / sizeof(float);
-
             std::vector<float> tempData(bufferSize);
-            std::copy(pData, pData + bufferLength, reinterpret_cast<BYTE *>(tempData.data()));
-
+            if (pData != nullptr)
             {
-                std::unique_lock<std::mutex> lock(outputBufferMutex);
-                outputBuffer.swap(tempData);
-                newData = true; // Set the newData flag
+                std::copy(pData, pData + bufferLength, reinterpret_cast<BYTE *>(tempData.data()));
+
+                {
+                    std::unique_lock<std::mutex> lock(outputBufferMutex);
+                    outputBuffer.swap(tempData);
+                    newData = true; // Set the newData flag
+                }
+                newDataAvailable.notify_one();
+                std::this_thread::sleep_for(std::chrono::milliseconds(16));
             }
-            newDataAvailable.notify_one();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             hr = pCaptureClient->ReleaseBuffer(numFramesToRead);
             if (FAILED(hr))

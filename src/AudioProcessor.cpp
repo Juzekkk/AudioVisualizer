@@ -28,7 +28,7 @@ void AudioProcessor::startProcessing()
     }
 
     isProcessing = true;
-    processingThreadHandle = CreateThread(NULL, 0, processingThreadEntryPoint, this, 0, &processingThreadId);
+    processingThreadHandle = CreateThread(nullptr, 0, processingThreadEntryPoint, this, 0, &processingThreadId);
 }
 
 void AudioProcessor::stopProcessing()
@@ -48,11 +48,6 @@ std::vector<float> AudioProcessor::getFrequencyWindowMagnitudes()
     std::unique_lock<std::mutex> lock(frequencyWindowMagnitudesMutex);
     packageReady = false;
     return frequencyWindowMagnitudes;
-}
-
-bool AudioProcessor::isReady() const
-{
-    return packageReady;
 }
 
 DWORD WINAPI AudioProcessor::processingThreadEntryPoint(LPVOID lpParameter)
@@ -94,7 +89,7 @@ void AudioProcessor::processAudio()
     }
 }
 
-std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std::vector<float> &audioData, double lowerFrequency, double upperFrequency)
+std::vector<float> AudioProcessor::calculateFrequencyWindowMagnitudes(const std::vector<float> &audioData, double lowerFrequency, double upperFrequency) const
 {
     std::vector<std::complex<double>> samples(audioData.begin(), audioData.begin() + audioData.size());
     samples.resize(1024, std::complex<double>(0.0, 0.0));
@@ -152,4 +147,16 @@ void AudioProcessor::modifyLogAlternation(std::vector<float> &vec)
     {
         vec[i] = std::log(vec[i] + 1) / 8;
     }
+}
+
+bool AudioProcessor::isReady() const
+{
+    return packageReady;
+}
+
+void AudioProcessor::waitUntilReady()
+{
+    std::unique_lock<std::mutex> lock(readyMutex);
+    cv.wait(lock, [this]()
+            { return this->isReady(); });
 }

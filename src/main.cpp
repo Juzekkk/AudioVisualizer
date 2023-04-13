@@ -40,9 +40,7 @@ int main()
 
     while (transparentWindow.isRunning())
     {
-        std::unique_lock<std::mutex> lock(audioProcessor.readyMutex);
-        audioProcessor.cv.wait(lock, [&audioProcessor]
-                               { return audioProcessor.isReady(); });
+        audioProcessor.waitUntilReady();
         std::vector<float> frequencyWindowMagnitudes = audioProcessor.getFrequencyWindowMagnitudes();
         if (!frequencyWindowMagnitudes.empty())
         {

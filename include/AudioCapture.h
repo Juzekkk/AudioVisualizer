@@ -21,7 +21,7 @@ public:
     float getSampleRate() const;
     std::vector<float> getOutputBuffer();
     bool hasNewData() const;
-    std::condition_variable newDataAvailable;
+    void waitUntilNewDataAvailable();
 
 private:
     static DWORD WINAPI captureThread(LPVOID lpParameter);
@@ -48,4 +48,5 @@ private:
     std::mutex outputBufferMutex;
     std::vector<float> outputBuffer;
     bool newData;
+    std::condition_variable newDataAvailable;
 };

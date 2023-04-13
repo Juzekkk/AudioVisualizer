@@ -161,7 +161,7 @@ void AudioCapture::processAudio()
                     newData = true; // Set the newData flag
                 }
                 newDataAvailable.notify_one();
-                std::this_thread::sleep_for(std::chrono::milliseconds(16));
+                std::this_thread::sleep_for(std::chrono::milliseconds(8));
             }
 
             hr = pCaptureClient->ReleaseBuffer(numFramesToRead);
@@ -178,6 +178,13 @@ void AudioCapture::processAudio()
 bool AudioCapture::hasNewData() const
 {
     return newData;
+}
+
+void AudioCapture::waitUntilNewDataAvailable()
+{
+    std::unique_lock<std::mutex> lock(outputBufferMutex);
+    newDataAvailable.wait(lock, [this]()
+                          { return this->hasNewData(); });
 }
 
 std::vector<float> AudioCapture::getOutputBuffer()

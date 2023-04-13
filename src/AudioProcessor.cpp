@@ -66,9 +66,7 @@ void AudioProcessor::processAudio()
     {
         std::vector<float> audioData(0);
         {
-            std::unique_lock<std::mutex> lock(audioDataMutex);
-            audioCapture.newDataAvailable.wait(lock, [&]()
-                                               { return audioCapture.hasNewData(); });
+            audioCapture.waitUntilNewDataAvailable();
             audioData = audioCapture.getOutputBuffer();
         }
         size_t nextPow2 = 1;

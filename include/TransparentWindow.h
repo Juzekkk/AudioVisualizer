@@ -4,8 +4,6 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include <vector>
-#include <windows.h>
-#include <shellapi.h>
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -20,18 +18,16 @@ public:
     ~TransparentWindow();
     void setBarHeights(const std::vector<float> &heights);
     void waitForClose();
-    bool isRunning();
+    bool isRunning() const;
+    void waitUntilTransparentWindowIsRunning();
     GLFWwindow *getWindow();
-    std::mutex mutex_;
-    std::condition_variable cv_;
 
 private:
     void run();
     void initialize();
     static void errorCallback(int error, const char *description);
     GLFWwindow *window;
-    std::atomic<bool> isRunning_;
-    std::thread renderThread_;
+    std::thread renderThread;
 
     SystemTrayMenu menu;
     int buttonEvent;
@@ -42,6 +38,9 @@ private:
     std::vector<float> prevBarHeights;
     std::vector<float> barHeights;
     bool hasBorder;
+    bool running;
+    std::mutex mutex;
+    std::condition_variable cv;
 
     void draw();
     void drawBars();

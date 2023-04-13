@@ -34,9 +34,7 @@ int main()
     }
 
     TransparentWindow transparentWindow;
-    std::unique_lock<std::mutex> lock(transparentWindow.mutex_);
-    transparentWindow.cv_.wait(lock, [&transparentWindow]
-                               { return transparentWindow.isRunning(); });
+    transparentWindow.waitUntilTransparentWindowIsRunning();
 
     while (transparentWindow.isRunning())
     {

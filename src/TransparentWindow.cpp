@@ -1,6 +1,8 @@
 #include "TransparentWindow.h"
 #include <iostream>
 #include <cmath>
+#include <windows.h>
+#include <shellapi.h>
 
 TransparentWindow::TransparentWindow() : window(nullptr),
                                          buttonEvent(0),
@@ -12,17 +14,17 @@ TransparentWindow::TransparentWindow() : window(nullptr),
                                          windowPosY(0),
                                          oldWndProc(nullptr),
                                          hasBorder(false),
-                                         isRunning_(false)
+                                         running(false)
 {
-    renderThread_ = std::thread(&TransparentWindow::run, this);
+    renderThread = std::thread(&TransparentWindow::run, this);
 }
 
 TransparentWindow::~TransparentWindow()
 {
-    if (isRunning_)
+    if (running)
     {
-        isRunning_ = false;
-        renderThread_.join();
+        running = false;
+        renderThread.join();
         unsubclassWindow();
         menu.uninitialize();
     }
@@ -43,12 +45,19 @@ void TransparentWindow::setBarHeights(const std::vector<float> &heights)
 
 void TransparentWindow::waitForClose()
 {
-    renderThread_.join();
+    renderThread.join();
 }
 
-bool TransparentWindow::isRunning()
+bool TransparentWindow::isRunning() const
 {
-    return isRunning_.load();
+    return running;
+}
+
+void TransparentWindow::waitUntilTransparentWindowIsRunning()
+{
+    std::unique_lock<std::mutex> lock(mutex);
+    cv.wait(lock, [this]()
+            { return this->isRunning(); });
 }
 
 GLFWwindow *TransparentWindow::getWindow()
@@ -58,7 +67,7 @@ GLFWwindow *TransparentWindow::getWindow()
 
 void TransparentWindow::run()
 {
-    if (isRunning_.exchange(true))
+    if (running)
     {
         return;
     }
@@ -66,11 +75,11 @@ void TransparentWindow::run()
     initialize();
 
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cv_.notify_one();
+        std::unique_lock<std::mutex> lock(mutex);
+        cv.notify_one();
     }
 
-    while (isRunning_.load())
+    while (running)
     {
         glfwPollEvents();
         int display_w, display_h;
@@ -83,7 +92,7 @@ void TransparentWindow::run()
 
         if (glfwWindowShouldClose(window))
         {
-            isRunning_ = false;
+            running = false;
         }
     }
 }
@@ -133,6 +142,7 @@ void TransparentWindow::initialize()
 
     ShowWindow(hWnd, SW_SHOW);
     subclassWindow();
+    running = true;
 }
 
 void TransparentWindow::draw()
@@ -198,8 +208,8 @@ void TransparentWindow::drawBars()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    float upSpeed = 0.9f;    // Speed when the bar height goes up
-    float downSpeed = 0.15f; // Speed when the bar height goes down
+    float upSpeed = 0.8f;
+    float downSpeed = 0.05f;
 
     for (size_t i = 0; i < barHeights.size(); ++i)
     {

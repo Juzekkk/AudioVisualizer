@@ -161,8 +161,8 @@ void AudioCapture::processAudio()
                     newData = true; // Set the newData flag
                 }
                 newDataAvailable.notify_one();
-                std::this_thread::sleep_for(std::chrono::milliseconds(8));
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(8));
 
             hr = pCaptureClient->ReleaseBuffer(numFramesToRead);
             if (FAILED(hr))

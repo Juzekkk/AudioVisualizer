@@ -135,7 +135,8 @@ void AudioCapture::processAudio()
         HRESULT hr = pCaptureClient->GetNextPacketSize(&numFramesAvailable);
         if (FAILED(hr))
             break;
-
+        if (numFramesAvailable <= 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         while (numFramesAvailable > 0)
         {
             UINT32 numFramesToRead;
@@ -154,13 +155,12 @@ void AudioCapture::processAudio()
             if (pData != nullptr)
             {
                 std::copy(pData, pData + bufferLength, reinterpret_cast<BYTE *>(tempData.data()));
-
                 {
                     std::unique_lock<std::mutex> lock(outputBufferMutex);
                     outputBuffer.swap(tempData);
-                    newData = true; // Set the newData flag
+                    newData = true;
+                    newDataAvailable.notify_one();
                 }
-                newDataAvailable.notify_one();
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(8));
 

@@ -74,7 +74,6 @@ void AudioProcessor::processAudio()
         {
             nextPow2 <<= 1;
         }
-
         size_t bufferSize = audioData.size();
         if (nextPow2 == 1024)
         {

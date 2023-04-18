@@ -4,34 +4,27 @@
 #include <windows.h>
 #include <shellapi.h>
 
-TransparentWindow::TransparentWindow(
-    int windowPosX,
-    int windowPosY,
-    int windowSizeX,
-    int windowSizeY,
-    int numOfBars,
-    int color_red,
-    int color_green,
-    int color_blue,
-    int color_alpha) : window(nullptr),
-                       buttonEvent(0),
-                       cursorPosX(0),
-                       cursorPosY(0),
-                       offsetCursorPosX(0),
-                       offsetCursorPosY(0),
-                       windowPosX(0),
-                       windowPosY(0),
-                       windowSizeX(400),
-                       windowSizeY(200),
-                       numOfBars(12),
-                       color_red(color_red),
-                       color_green(color_green),
-                       color_blue(color_blue),
-                       color_alpha(color_alpha),
-                       oldWndProc(nullptr),
-                       hasBorder(false),
-                       running(false)
+TransparentWindow::TransparentWindow() : window(nullptr),
+                                         buttonEvent(0),
+                                         cursorPosX(0),
+                                         cursorPosY(0),
+                                         offsetCursorPosX(0),
+                                         offsetCursorPosY(0),
+                                         oldWndProc(nullptr),
+                                         hasBorder(false),
+                                         running(false),
+                                         settings("../settings.ini")
 {
+
+    windowPosX = settings.getSetting<int>("windowPosX");
+    windowPosY = settings.getSetting<int>("windowPosY");
+    windowSizeX = settings.getSetting<int>("windowWidth");
+    windowSizeY = settings.getSetting<int>("windowHeight");
+    numOfBars = settings.getSetting<int>("numBars");
+    color_red = settings.getSetting<float>("color_red");
+    color_green = settings.getSetting<float>("color_green");
+    color_blue = settings.getSetting<float>("color_blue");
+    color_alpha = settings.getSetting<float>("color_alpha");
     renderThread = std::thread(&TransparentWindow::run, this);
 }
 
@@ -48,6 +41,16 @@ TransparentWindow::~TransparentWindow()
     {
         glfwDestroyWindow(window);
     }
+    settings.setSetting("windowPosX", windowPosX);
+    settings.setSetting("windowPosY", windowPosY);
+    settings.setSetting("windowWidth", windowSizeX);
+    settings.setSetting("windowHeight", windowSizeY);
+    settings.setSetting("numBars", numOfBars);
+    settings.setSetting("color_red", color_red);
+    settings.setSetting("color_green", color_green);
+    settings.setSetting("color_blue", color_blue);
+    settings.setSetting("color_alpha", color_alpha);
+    settings.save("../settings.ini");
 }
 
 void TransparentWindow::setBarHeights(const std::vector<float> &heights)
@@ -87,9 +90,7 @@ void TransparentWindow::run()
     {
         return;
     }
-
     initialize();
-
     {
         std::unique_lock<std::mutex> lock(mutex);
         cv.notify_one();
@@ -132,15 +133,10 @@ void TransparentWindow::initialize()
     {
         std::cerr << "Failed to initialize GLAD" << std::endl;
     }
-
-    // Center the window on the screen
-    // const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    // int screenCenterX = (mode->width - 400) / 2;
-    // int screenCenterY = (mode->height + 450) / 2;
     glfwSetWindowPos(window, windowPosX, windowPosY);
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
+    glfwSwapInterval(1);
 
     glfwSetCursorPosCallback(window, TransparentWindow::cursorPositionCallbackWrapper);
     glfwSetMouseButtonCallback(window, TransparentWindow::mouseButtonCallbackWrapper);
@@ -224,8 +220,8 @@ void TransparentWindow::drawBars()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    float upSpeed = 0.8f;
-    float downSpeed = 0.05f;
+    float upSpeed = 0.7f;
+    float downSpeed = 0.1f;
 
     for (size_t i = 0; i < barHeights.size(); ++i)
     {

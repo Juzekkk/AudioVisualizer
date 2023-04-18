@@ -13,6 +13,7 @@
 
 int main()
 {
+
     AudioCapture audioCapture;
 
     if (!audioCapture.initialize())

@@ -10,20 +10,12 @@
 #include <condition_variable>
 
 #include "SystemTrayMenu.h"
+#include "INIFileParser.h"
 
 class TransparentWindow
 {
 public:
-    TransparentWindow(int windowPosX = 0,
-                      int windowPosY = 0,
-                      int windowSizeX = 400,
-                      int windowSizeY = 200,
-                      int numOfBars = 12,
-                      int color_red = 1,
-                      int color_green = 1,
-                      int color_blue = 1,
-                      int color_alpha = 1);
-
+    TransparentWindow();
     ~TransparentWindow();
     void setBarHeights(const std::vector<float> &heights);
     void waitForClose();
@@ -39,6 +31,8 @@ private:
     std::thread renderThread;
 
     SystemTrayMenu menu;
+    INIFileParser settings;
+
     int buttonEvent;
     int cursorPosX, cursorPosY;
     int offsetCursorPosX, offsetCursorPosY;

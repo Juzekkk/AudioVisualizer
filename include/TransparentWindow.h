@@ -14,7 +14,16 @@
 class TransparentWindow
 {
 public:
-    TransparentWindow();
+    TransparentWindow(int windowPosX = 0,
+                      int windowPosY = 0,
+                      int windowSizeX = 400,
+                      int windowSizeY = 200,
+                      int numOfBars = 12,
+                      int color_red = 1,
+                      int color_green = 1,
+                      int color_blue = 1,
+                      int color_alpha = 1);
+
     ~TransparentWindow();
     void setBarHeights(const std::vector<float> &heights);
     void waitForClose();
@@ -33,7 +42,6 @@ private:
     int buttonEvent;
     int cursorPosX, cursorPosY;
     int offsetCursorPosX, offsetCursorPosY;
-    int windowPosX, windowPosY;
     WNDPROC oldWndProc;
     std::vector<float> prevBarHeights;
     std::vector<float> barHeights;
@@ -41,6 +49,11 @@ private:
     bool running;
     std::mutex mutex;
     std::condition_variable cv;
+
+    int windowPosX, windowPosY;
+    int windowSizeX, windowSizeY;
+    int numOfBars;
+    int color_red, color_green, color_blue, color_alpha;
 
     void draw();
     void drawBars();

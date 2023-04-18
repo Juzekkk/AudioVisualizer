@@ -136,7 +136,7 @@ void AudioCapture::processAudio()
         if (FAILED(hr))
             break;
         if (numFramesAvailable <= 0)
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         while (numFramesAvailable > 0)
         {
             UINT32 numFramesToRead;

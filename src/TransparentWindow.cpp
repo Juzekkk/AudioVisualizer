@@ -4,17 +4,33 @@
 #include <windows.h>
 #include <shellapi.h>
 
-TransparentWindow::TransparentWindow() : window(nullptr),
-                                         buttonEvent(0),
-                                         cursorPosX(0),
-                                         cursorPosY(0),
-                                         offsetCursorPosX(0),
-                                         offsetCursorPosY(0),
-                                         windowPosX(0),
-                                         windowPosY(0),
-                                         oldWndProc(nullptr),
-                                         hasBorder(false),
-                                         running(false)
+TransparentWindow::TransparentWindow(
+    int windowPosX,
+    int windowPosY,
+    int windowSizeX,
+    int windowSizeY,
+    int numOfBars,
+    int color_red,
+    int color_green,
+    int color_blue,
+    int color_alpha) : window(nullptr),
+                       buttonEvent(0),
+                       cursorPosX(0),
+                       cursorPosY(0),
+                       offsetCursorPosX(0),
+                       offsetCursorPosY(0),
+                       windowPosX(0),
+                       windowPosY(0),
+                       windowSizeX(400),
+                       windowSizeY(200),
+                       numOfBars(12),
+                       color_red(color_red),
+                       color_green(color_green),
+                       color_blue(color_blue),
+                       color_alpha(color_alpha),
+                       oldWndProc(nullptr),
+                       hasBorder(false),
+                       running(false)
 {
     renderThread = std::thread(&TransparentWindow::run, this);
 }
@@ -104,7 +120,7 @@ void TransparentWindow::initialize()
     glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
     glfwWindowHint(GLFW_ALPHA_BITS, 8);
 
-    window = glfwCreateWindow(400, 200, "Semi-Transparent Window", nullptr, nullptr);
+    window = glfwCreateWindow(windowSizeX, windowSizeY, "Semi-Transparent Window", nullptr, nullptr);
     if (!window)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -118,10 +134,10 @@ void TransparentWindow::initialize()
     }
 
     // Center the window on the screen
-    const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    int screenCenterX = (mode->width - 400) / 2;
-    int screenCenterY = (mode->height + 450) / 2;
-    glfwSetWindowPos(window, screenCenterX, screenCenterY);
+    // const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    // int screenCenterX = (mode->width - 400) / 2;
+    // int screenCenterY = (mode->height + 450) / 2;
+    glfwSetWindowPos(window, windowPosX, windowPosY);
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
@@ -230,7 +246,7 @@ void TransparentWindow::drawBars()
         float y = display_h / 2.0f;
         float height = currentHeight * display_h / 2.0f;
 
-        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glColor4f(color_red, color_green, color_blue, color_alpha);
         glBegin(GL_QUADS);
         glVertex2f(x, y);
         glVertex2f(x + barWidth, y);

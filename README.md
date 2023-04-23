@@ -9,7 +9,7 @@ AudioVisualizer is a real-time audio frequency visualizer that captures system a
 - Real-time audio frequency visualization
 - Transparent window display
 - Position and size customization through system tray menu
-- Additional customization available through variables in the code
+- Additional customization available through settings.ini file
 
 ### Dependencies
 

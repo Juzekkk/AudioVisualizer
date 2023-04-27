@@ -21,7 +21,7 @@ AudioVisualizer is a real-time audio frequency visualizer that captures system a
 To build the project, follow these steps:
 
 - Install GLFW and GLAD according to their respective documentation.
-- Clone the repository: git clone https://github.com/username/AudioVisualizer.git
+- Clone the repository: git clone https://github.com/Juzekkk/AudioVisualizer.git
 - Navigate to the project directory: cd AudioVisualizer
 - Create a build directory and navigate to it: mkdir build && cd build
 - Run CMake and compile the project:

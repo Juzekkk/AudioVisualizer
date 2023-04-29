@@ -2,7 +2,7 @@
 
 AudioVisualizer is a real-time audio frequency visualizer that captures system audio and displays a transparent window with bars representing the frequency magnitudes. The project uses GLFW and OpenGL for window and graphics management, and leverages custom AudioCapture and AudioProcessor classes to handle audio input and processing.
 
-![Example](example\example.gif)
+![Example](https://raw.githubusercontent.com/Juzekkk/AudioVisualizer/master/example/example.gif)
 
 ##### Windows Only!!!!
 
